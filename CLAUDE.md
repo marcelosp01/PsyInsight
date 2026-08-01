@@ -16,7 +16,7 @@ As modalidades cobertas pelo sistema, em conformidade com a Resolução CFP nº 
 - **Laudo Psicológico** (Art. 13)[cite: 1]
 - **Parecer Psicológico** (Art. 14)[cite: 1]
 
-A implementação atual suporta a geração e edição orientada por IA de todas as modalidades de documentos regulamentadas, com autenticação completa de usuários e persistência de dados.
+**Estado atual (PSYIN-1 concluído):** a plataforma já suporta a criação manual (via formulário) e a pré-visualização/exportação de todas as 6 modalidades de documentos regulamentadas, com autenticação completa de usuários e persistência de dados. A geração e edição **orientada por IA** (chat de mapeamento de demanda, preenchimento assistido via Gemini) ainda **não foi implementada** — está descrita na seção "Design da IA" como diretriz para quando essa funcionalidade for desenvolvida.
 
 ## Processo de Desenvolvimento
 
@@ -28,6 +28,8 @@ Quando instruído a criar uma funcionalidade:
 
 ## Design da IA
 
+> Diretriz para funcionalidades futuras — a integração com LLM ainda não foi implementada nesta base de código.
+
 Ao escrever código para realizar chamadas a LLMs, utilize a SDK oficial do Google GenAI ou o LiteLLM integrados ao modelo **Gemini 1.5 Pro** (para raciocínio complexo e redação dos laudos) e **Gemini 1.5 Flash** (para interações rápidas no chat).
 
 - **Respostas Estruturadas (Structured Outputs):** Utilize o recurso nativo de *Structured Outputs* (exigindo schemas JSON rígidos) para garantir o preenchimento correto dos campos regulamentares de cada documento psicológico (Identificação, Descrição da Demanda, Procedimento, Análise, Conclusão, Referências) conforme a Resolução CFP nº 06/2019.
@@ -37,13 +39,13 @@ Certifique-se de que a chave `GEMINI_API_KEY` (ou `GOOGLE_API_KEY`) esteja confi
 
 ## Arquitetura Técnica
 
-O projeto completo deve ser empacotado em um contêiner Docker.  
-O backend deve ficar em `backend/`, utilizando **uv** e **FastAPI**.  
-O frontend deve ficar em `frontend/`.  
-O banco de dados deve utilizar **SQLite**, recriado do zero a cada inicialização do contêiner Docker, fornecendo suporte à tabela de usuários com cadastro (*sign up*) e login (*sign in*).  
-Considere compilar o frontend estaticamente e servi-lo diretamente via FastAPI, se viável.  
+O projeto completo é empacotado em um contêiner Docker (`Dockerfile` multi-stage na raiz + `docker-compose.yml`).
+O backend fica em `backend/`, utilizando **uv** e **FastAPI**.
+O frontend fica em `frontend/`.
+O banco de dados utiliza **SQLite**, recriado do zero a cada inicialização do contêiner Docker (`reset_database()` no `lifespan` do FastAPI dropa e recria as tabelas), fornecendo suporte à tabela de usuários com cadastro (*sign up*) e login (*sign in*).
+O frontend é compilado estaticamente (`npm run build`) e servido diretamente via FastAPI (`StaticFiles` + fallback de SPA em `backend/app/main.py`).
 
-Devem existir scripts no diretório `scripts/` para operacionalização:
+Scripts no diretório `scripts/` para operacionalização (todos testados e funcionais):
 
 ```bash
 # Mac
@@ -57,3 +59,31 @@ scripts/stop-linux.sh
 # Windows
 scripts/start-windows.ps1
 scripts/stop-windows.ps1
+```
+
+Todos os scripts chamam `docker compose up --build -d` / `docker compose down`. A aplicação fica disponível em `http://localhost:8000`.
+
+## Estado Atual da Implementação
+
+### Backend (`backend/`)
+
+- **Stack:** FastAPI + SQLAlchemy (síncrono) + SQLite, gerenciado com `uv` (`pyproject.toml` / `uv.lock`).
+- **Autenticação** (`app/auth.py`, `app/routers/auth.py`): senha com hash via `bcrypt` (não `passlib` — incompatibilidade conhecida entre `passlib` e `bcrypt>=4.1`), sessão via JWT (`python-jose`) armazenado em cookie `httponly` (`psyinsight_session`). Endpoints: `POST /api/auth/signup`, `/login`, `/logout`, `GET /api/auth/me`.
+- **Modelo de usuário** (`app/models.py`): nome, e-mail, **CRP** (necessário para o cabeçalho dos documentos), senha com hash.
+- **Modalidades de documento** (`app/document_types.py`): schema de campos por modalidade (Declaração, Atestado, Relatório Psicológico, Relatório Multiprofissional, Laudo, Parecer) conforme os artigos da Resolução CFP nº 06/2019. Exposto via `GET /api/documents/types` (rota protegida).
+- **Geração de PDF** (`app/pdf.py`, `POST /api/documents/pdf`): usa `fpdf2`. Atenção ao usar `multi_cell(0, ...)`: sempre chamar `pdf.set_x(pdf.l_margin)` antes — combinar `align="C"` com largura automática (`0`) sem resetar `x` faz o fpdf2 herdar a posição do cursor da chamada anterior e pode disparar `FPDFException: Not enough horizontal space` (ver helper `_write_line` em `pdf.py`).
+- **Testes:** `backend/app/tests/` (pytest + `TestClient`), banco SQLite temporário isolado por sessão de teste via `conftest.py`. Rodar com `uv run pytest`.
+- Dependência `email-validator` é necessária para o `EmailStr` do Pydantic (não vem por padrão com `pydantic[email]`).
+
+### Frontend (`frontend/`)
+
+- **Stack:** Vite + React 19 + TypeScript + React Router + Tailwind CSS v4 (config via `@theme` em `src/index.css`, sem `tailwind.config.js`).
+- **Paleta de cores calmas:** tons `sage` (verde-sálvia) e `slate` (azul-acinzentado) definidos em `src/index.css`.
+- **Estrutura:** `src/api/client.ts` (cliente fetch com cookies), `src/context/AuthContext.tsx`, `src/components/` (`DocumentForm`, `DocumentPreview`, `ProtectedRoute`), `src/pages/` (`LoginPage`, `SignupPage`, `DashboardPage`).
+- **`DashboardPage`:** layout de duas colunas (formulário à esquerda, preview em tempo real à direita), empilha em telas estreitas (`grid-cols-1 lg:grid-cols-2`). Seletor de modalidade, download de PDF e impressão (`window.print()` com CSS de impressão em `src/index.css` restrito a `#document-preview`).
+- **Testes:** Vitest + Testing Library (`*.test.tsx` ao lado dos componentes/páginas). Rodar com `npm test`. Setup em `src/test/setup.ts`.
+- Em desenvolvimento, o Vite (porta 5173) faz proxy de `/api` para o backend (porta 8000) — ver `vite.config.ts`.
+
+### Dependências de terceiros — decisões relevantes
+
+- `react-router-dom` fixado em `^7.18.2`: versões `6.0.0–7.17.0` têm múltiplos advisories de alta severidade (a maioria SSR/RSC, não aplicável a este SPA client-side); `7.18.2` é a versão mais recente que resolve todos exceto um advisory específico de modo RSC (não utilizado aqui).
