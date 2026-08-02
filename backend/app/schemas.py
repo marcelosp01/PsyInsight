@@ -28,7 +28,7 @@ class UserOut(BaseModel):
 class DocumentField(BaseModel):
     key: str
     label: str
-    kind: str  # "text" | "textarea" | "date"
+    kind: str  # "text" | "textarea" | "date" | "prose" (texto corrido, sem rótulo de campo na pré-visualização/PDF)
     required: bool = True
     help_text: str | None = None
 
@@ -96,4 +96,14 @@ class ChatSessionOut(BaseModel):
 
 
 class ChatMessageCreate(BaseModel):
+    content: str | None = Field(default=None, min_length=1, max_length=8000)
+
+
+class ModalitySelectionHistoryMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ModalitySelectionRequest(BaseModel):
+    history: list[ModalitySelectionHistoryMessage] = Field(default_factory=list)
     content: str | None = Field(default=None, min_length=1, max_length=8000)

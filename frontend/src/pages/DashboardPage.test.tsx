@@ -28,6 +28,7 @@ vi.mock('../api/client', async () => {
       },
       chat: {
         createOrResumeSession: vi.fn(),
+        selectModality: vi.fn(),
         sendMessage: vi.fn(),
       },
     },
@@ -54,8 +55,7 @@ const documentTypes: DocumentType[] = [
       { key: 'profissional_nome', label: 'Nome do(a) psicólogo(a)', kind: 'text', required: true, help_text: null },
       { key: 'profissional_crp', label: 'CRP', kind: 'text', required: true, help_text: null },
       { key: 'cidade_data', label: 'Cidade e data', kind: 'text', required: true, help_text: null },
-      { key: 'identificacao', label: 'Identificação', kind: 'textarea', required: true, help_text: null },
-      { key: 'teor_declaracao', label: 'Teor da declaração', kind: 'textarea', required: true, help_text: null },
+      { key: 'texto_declaracao', label: 'Texto da declaração', kind: 'prose', required: true, help_text: null },
     ],
   },
   {
@@ -65,7 +65,7 @@ const documentTypes: DocumentType[] = [
     description: 'Resposta técnica a uma consulta específica.',
     fields: [
       { key: 'profissional_nome', label: 'Nome do(a) psicólogo(a)', kind: 'text', required: true, help_text: null },
-      { key: 'consulta', label: 'Consulta / quesito formulado', kind: 'textarea', required: true, help_text: null },
+      { key: 'texto_parecer', label: 'Texto do parecer', kind: 'prose', required: true, help_text: null },
     ],
   },
 ]
@@ -116,8 +116,31 @@ describe('DashboardPage', () => {
     vi.clearAllMocks()
     vi.mocked(api.me).mockResolvedValue(loggedInUser)
     vi.mocked(api.documentTypes).mockResolvedValue(documentTypes)
+    // Por padrão, a própria mensagem de abertura (sem conteúdo do usuário) já
+    // resolve para "declaração", simulando o caso comum em que o chat entende
+    // de imediato o que foi pedido, sem precisar de nenhuma resposta.
+    vi.mocked(api.chat.selectModality).mockResolvedValue(
+      makeSSEResponse([{ type: 'document_type', slug: 'declaracao' }, { type: 'done' }]),
+    )
     vi.mocked(api.chat.createOrResumeSession).mockResolvedValue(chatSession())
     vi.mocked(api.chat.sendMessage).mockResolvedValue(makeSSEResponse([{ type: 'done' }]))
+  })
+
+  it('starts without a preview until the chat resolves the document modality', async () => {
+    const deferred = createDeferred<Response>()
+    vi.mocked(api.chat.selectModality).mockReturnValue(deferred.promise)
+    renderDashboard()
+
+    await screen.findByText('Entrevista')
+    expect(
+      screen.getByText(/A pré-visualização aparece assim que a modalidade/),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled()
+
+    deferred.resolve(makeSSEResponse([{ type: 'document_type', slug: 'declaracao' }, { type: 'done' }]))
+
+    await waitFor(() => expect(api.chat.createOrResumeSession).toHaveBeenCalled())
+    expect(await screen.findByText('Declaração')).toBeInTheDocument()
   })
 
   it('keeps editing the same record after creating a saved document (id is persisted in the URL)', async () => {
@@ -133,8 +156,7 @@ describe('DashboardPage', () => {
             profissional_nome: 'Ana Souza',
             profissional_crp: '06/12345',
             cidade_data: 'São Paulo, hoje',
-            identificacao: 'João',
-            teor_declaracao: 'Compareceu',
+            texto_declaracao: 'João compareceu a 4 sessões de atendimento psicológico.',
           },
         },
         { type: 'done' },
@@ -144,7 +166,8 @@ describe('DashboardPage', () => {
     renderDashboard()
 
     await screen.findByText('Entrevista')
-    // A sessão nova (sem histórico) dispara automaticamente a primeira mensagem.
+    // A modalidade é resolvida pelo chat e a sessão real (sem histórico) dispara
+    // automaticamente a primeira mensagem.
     await waitFor(() => expect(screen.getByLabelText('Mensagem')).not.toBeDisabled())
 
     await user.click(screen.getByRole('button', { name: 'Salvar' }))
@@ -159,20 +182,25 @@ describe('DashboardPage', () => {
     await waitFor(() => expect(api.savedDocuments.get).toHaveBeenCalledWith(42))
   })
 
-  it('ignores a stale saved-document fetch if the user switches modality before it resolves', async () => {
+  it('ignores a stale saved-document fetch if the user starts a new document before it resolves', async () => {
     const deferred = createDeferred<SavedDocument>()
     vi.mocked(api.savedDocuments.get).mockReturnValue(deferred.promise)
+    // Never resolves: keeps the panel in "selecting modality" so we can assert the
+    // placeholder preview stays even after the stale saved-document fetch lands.
+    vi.mocked(api.chat.selectModality).mockReturnValue(new Promise(() => {}))
     const user = userEvent.setup()
     renderDashboard(['/?laudoId=1'])
 
     await screen.findByText('Entrevista')
-    await user.selectOptions(screen.getByLabelText('Modalidade do documento'), 'parecer')
+    await user.click(screen.getByRole('button', { name: 'Novo laudo' }))
 
-    // The stale fetch for the old (declaração) saved document resolves late.
+    // The stale fetch for the old saved document resolves late.
     deferred.resolve(savedDocument({ id: 1, document_type: 'declaracao' }))
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Modalidade do documento')).toHaveValue('parecer')
+      expect(
+        screen.getByText(/A pré-visualização aparece assim que a modalidade/),
+      ).toBeInTheDocument()
     })
     expect(screen.queryByText(/Editando laudo salvo/)).not.toBeInTheDocument()
   })

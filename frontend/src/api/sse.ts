@@ -2,6 +2,7 @@ export type ChatStreamEvent =
   | { type: 'token'; text: string }
   | { type: 'values'; values: Record<string, string> }
   | { type: 'memory'; note: string }
+  | { type: 'document_type'; slug: string }
   | { type: 'error'; detail: string }
   | { type: 'done' }
 

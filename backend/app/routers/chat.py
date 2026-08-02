@@ -5,14 +5,39 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
-from app.chat_service import run_chat_turn
+from app.chat_service import run_chat_turn, run_modality_selection_turn
 from app.database import get_db
 from app.document_types import get_document_type
 from app.models import ChatSession, User, UserMemory
 from app.routers.saved_documents import get_owned_document
-from app.schemas import ChatMessageCreate, ChatSessionCreate, ChatSessionOut
+from app.schemas import (
+    ChatMessageCreate,
+    ChatSessionCreate,
+    ChatSessionOut,
+    ModalitySelectionRequest,
+)
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+
+@router.post("/modality-selection")
+def select_modality(
+    payload: ModalitySelectionRequest,
+    current_user: User = Depends(get_current_user),
+):
+    if payload.content is None and payload.history:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Só é possível abrir a conversa sem mensagem quando ela ainda não tem histórico.",
+        )
+
+    history = [(message.role, message.content) for message in payload.history]
+
+    async def event_stream():
+        async for event in run_modality_selection_turn(history=history, user_message=payload.content):
+            yield f"data: {json.dumps(event)}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 def _get_owned_session(db: Session, session_id: int, current_user: User) -> ChatSession:

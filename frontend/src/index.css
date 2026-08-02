@@ -26,6 +26,9 @@
 
   --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-serif: Georgia, "Times New Roman", serif;
+  /* Mesma família usada no PDF gerado (fpdf2, backend/app/pdf.py), para que a
+     pré-visualização em tela corresponda ao documento exportado. */
+  --font-preview: Helvetica, Arial, sans-serif;
 }
 
 html,

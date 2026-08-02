@@ -6,8 +6,7 @@ _VALID_VALUES = {
     "profissional_nome": "Ana Souza",
     "profissional_crp": "06/12345",
     "cidade_data": "São Paulo, 31 de julho de 2026",
-    "identificacao": "João da Silva, 30 anos.",
-    "teor_declaracao": "Compareceu a 4 sessões de atendimento psicológico.",
+    "texto_declaracao": "João da Silva, 30 anos, compareceu a 4 sessões de atendimento psicológico.",
 }
 
 
@@ -142,7 +141,7 @@ def test_send_message_streams_tokens_and_updates_values(signed_up_client, monkey
     monkeypatch.setattr(
         gemini_client,
         "extract_structured_values",
-        _make_fake_extraction({"identificacao": "João da Silva, 30 anos."}),
+        _make_fake_extraction({"texto_declaracao": "João da Silva, 30 anos."}),
     )
     saved = _create_saved_document(signed_up_client)
     session_payload = {"document_type": "declaracao", "saved_document_id": saved["id"]}
@@ -158,11 +157,11 @@ def test_send_message_streams_tokens_and_updates_values(signed_up_client, monkey
     token_events = [e for e in events if e["type"] == "token"]
     assert "".join(e["text"] for e in token_events) == "Olá! Como posso ajudar?"
     values_events = [e for e in events if e["type"] == "values"]
-    assert values_events[-1]["values"]["identificacao"] == "João da Silva, 30 anos."
+    assert values_events[-1]["values"]["texto_declaracao"] == "João da Silva, 30 anos."
     assert events[-1]["type"] == "done"
 
     resumed = signed_up_client.post("/api/chat/sessions", json=session_payload).json()
-    assert resumed["values"]["identificacao"] == "João da Silva, 30 anos."
+    assert resumed["values"]["texto_declaracao"] == "João da Silva, 30 anos."
 
 
 def test_send_message_does_not_overwrite_values_with_empty_extraction(signed_up_client, monkeypatch):
@@ -170,7 +169,7 @@ def test_send_message_does_not_overwrite_values_with_empty_extraction(signed_up_
     session = signed_up_client.post("/api/chat/sessions", json={"document_type": "declaracao"}).json()
 
     monkeypatch.setattr(
-        gemini_client, "extract_structured_values", _make_fake_extraction({"identificacao": "João"})
+        gemini_client, "extract_structured_values", _make_fake_extraction({"texto_declaracao": "João"})
     )
     with signed_up_client.stream(
         "POST", f"/api/chat/sessions/{session['id']}/messages", json={"content": "primeira msg"}
@@ -184,7 +183,7 @@ def test_send_message_does_not_overwrite_values_with_empty_extraction(signed_up_
         events = _iter_events(response)
 
     values_events = [e for e in events if e["type"] == "values"]
-    assert values_events[-1]["values"]["identificacao"] == "João"
+    assert values_events[-1]["values"]["texto_declaracao"] == "João"
 
 
 def test_send_message_persists_memory_note_when_present(signed_up_client, monkeypatch):
@@ -241,6 +240,75 @@ def test_send_message_streams_error_event_when_extraction_fails(signed_up_client
         "detail": "Não foi possível atualizar os campos automaticamente.",
     }
     assert events[-1] == {"type": "done"}
+
+
+def test_select_modality_requires_authentication(client):
+    response = client.post("/api/chat/modality-selection", json={"history": [], "content": None})
+    assert response.status_code == 401
+
+
+def test_select_modality_rejects_null_content_when_history_exists(signed_up_client):
+    response = signed_up_client.post(
+        "/api/chat/modality-selection",
+        json={"history": [{"role": "assistant", "content": "Olá!"}], "content": None},
+    )
+    assert response.status_code == 400
+
+
+def test_select_modality_streams_tokens_and_resolves_document_type(signed_up_client, monkeypatch):
+    monkeypatch.setattr(gemini_client, "stream_chat_reply", _fake_stream_chat_reply)
+    monkeypatch.setattr(
+        gemini_client,
+        "extract_structured_values",
+        _make_fake_extraction({"slug": "declaracao"}),
+    )
+
+    with signed_up_client.stream(
+        "POST",
+        "/api/chat/modality-selection",
+        json={"history": [], "content": "Preciso de uma declaração de comparecimento."},
+    ) as response:
+        events = _iter_events(response)
+
+    token_events = [e for e in events if e["type"] == "token"]
+    assert "".join(e["text"] for e in token_events) == "Olá! Como posso ajudar?"
+    assert {"type": "document_type", "slug": "declaracao"} in events
+    assert events[-1] == {"type": "done"}
+
+
+def test_select_modality_stays_unresolved_without_a_clear_slug(signed_up_client, monkeypatch):
+    monkeypatch.setattr(gemini_client, "stream_chat_reply", _fake_stream_chat_reply)
+    monkeypatch.setattr(gemini_client, "extract_structured_values", _make_fake_extraction({}))
+
+    with signed_up_client.stream(
+        "POST",
+        "/api/chat/modality-selection",
+        json={"history": [], "content": "Não sei bem o que preciso."},
+    ) as response:
+        events = _iter_events(response)
+
+    assert not any(e["type"] == "document_type" for e in events)
+    assert events == [
+        {"type": "token", "text": "Olá! "},
+        {"type": "token", "text": "Como posso ajudar?"},
+        {"type": "done"},
+    ]
+
+
+def test_select_modality_ignores_invalid_extracted_slug(signed_up_client, monkeypatch):
+    monkeypatch.setattr(gemini_client, "stream_chat_reply", _fake_stream_chat_reply)
+    monkeypatch.setattr(
+        gemini_client, "extract_structured_values", _make_fake_extraction({"slug": "inexistente"})
+    )
+
+    with signed_up_client.stream(
+        "POST",
+        "/api/chat/modality-selection",
+        json={"history": [], "content": "Um documento qualquer."},
+    ) as response:
+        events = _iter_events(response)
+
+    assert not any(e["type"] == "document_type" for e in events)
 
 
 def test_deleting_saved_document_removes_its_chat_session(signed_up_client, monkeypatch):

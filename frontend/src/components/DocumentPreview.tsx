@@ -9,7 +9,7 @@ export function DocumentPreview({ documentType, values }: DocumentPreviewProps) 
   return (
     <div
       id="document-preview"
-      className="min-h-[29.7cm] rounded-lg border border-nude-200 bg-white p-10 font-serif text-slate-800 shadow-sm"
+      className="min-h-[29.7cm] rounded-lg border border-nude-200 bg-white p-10 font-preview text-slate-800 shadow-sm"
     >
       <header className="border-b border-nude-200 pb-4 text-center">
         <h2 className="text-xl font-semibold">{documentType.name}</h2>
@@ -21,6 +21,18 @@ export function DocumentPreview({ documentType, values }: DocumentPreviewProps) 
       <div className="mt-6 space-y-5">
         {documentType.fields.map((field) => {
           const value = (values[field.key] ?? '').trim()
+
+          if (field.kind === 'prose') {
+            return (
+              <p
+                key={field.key}
+                className={`whitespace-pre-wrap leading-relaxed ${value ? 'text-slate-800' : 'text-slate-300 italic'}`}
+              >
+                {value || 'O texto do documento vai sendo construído aqui à medida que você responde no chat.'}
+              </p>
+            )
+          }
+
           return (
             <section key={field.key}>
               <h3 className="text-sm font-semibold tracking-wide text-nude-700 uppercase">

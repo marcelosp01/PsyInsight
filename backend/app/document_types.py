@@ -12,36 +12,6 @@ _COMMON_HEADER_FIELDS = [
     DocumentField(key="cidade_data", label="Cidade e data", kind="text"),
 ]
 
-_COMMON_IDENTIFICATION = DocumentField(
-    key="identificacao",
-    label="Identificação",
-    kind="textarea",
-    help_text="Dados de quem é objeto do documento (nome, idade, e demais informações pertinentes).",
-)
-
-_DEMANDA = DocumentField(
-    key="descricao_demanda",
-    label="Descrição da Demanda",
-    kind="textarea",
-    help_text="Motivo que originou o atendimento ou a solicitação do documento.",
-)
-
-_PROCEDIMENTO = DocumentField(
-    key="procedimento",
-    label="Procedimento",
-    kind="textarea",
-    help_text="Técnicas, instrumentos e métodos utilizados.",
-)
-
-_ANALISE = DocumentField(
-    key="analise",
-    label="Análise",
-    kind="textarea",
-    help_text="Análise técnica das informações e dos resultados obtidos.",
-)
-
-_CONCLUSAO = DocumentField(key="conclusao", label="Conclusão", kind="textarea")
-
 _REFERENCIAS = DocumentField(
     key="referencias",
     label="Referências",
@@ -60,12 +30,17 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
             description="Confirma a ocorrência de um atendimento psicológico, sem detalhar procedimentos, análises ou conclusões.",
             fields=[
                 *_COMMON_HEADER_FIELDS,
-                _COMMON_IDENTIFICATION,
                 DocumentField(
-                    key="teor_declaracao",
-                    label="Teor da declaração",
-                    kind="textarea",
-                    help_text="Descrição objetiva do que está sendo declarado (ex.: comparecimento, período de atendimento).",
+                    key="texto_declaracao",
+                    label="Texto da declaração",
+                    kind="prose",
+                    help_text=(
+                        "Texto corrido e contínuo da declaração, redigido pela própria IA à "
+                        "medida que a conversa avança. Deve cobrir a identificação da "
+                        "pessoa atendida e o teor objetivo do que está sendo declarado "
+                        "(ex.: comparecimento, período de atendimento), sem detalhar "
+                        "procedimentos, análises ou conclusões."
+                    ),
                 ),
             ],
         ),
@@ -76,22 +51,19 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
             description="Atesta, a partir da avaliação psicológica, a existência ou não de transtorno ou impedimento.",
             fields=[
                 *_COMMON_HEADER_FIELDS,
-                _COMMON_IDENTIFICATION,
-                _DEMANDA,
                 DocumentField(
-                    key="cid",
-                    label="CID (opcional)",
-                    kind="text",
-                    required=False,
-                    help_text="Somente com autorização expressa da pessoa avaliada.",
+                    key="texto_atestado",
+                    label="Texto do atestado",
+                    kind="prose",
+                    help_text=(
+                        "Texto corrido e contínuo do atestado, redigido pela própria IA à "
+                        "medida que a conversa avança — não uma lista de campos separados. "
+                        "Deve cobrir a identificação da pessoa avaliada, o motivo da "
+                        "avaliação, a existência ou não de transtorno/impedimento "
+                        "identificado e, apenas com autorização expressa da pessoa "
+                        "avaliada, o CID correspondente e eventual afastamento sugerido."
+                    ),
                 ),
-                DocumentField(
-                    key="afastamento_sugerido",
-                    label="Afastamento sugerido",
-                    kind="text",
-                    required=False,
-                ),
-                _CONCLUSAO,
             ],
         ),
         DocumentTypeOut(
@@ -101,11 +73,18 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
             description="Descreve, de forma articulada, as informações resultantes de acompanhamento psicológico.",
             fields=[
                 *_COMMON_HEADER_FIELDS,
-                _COMMON_IDENTIFICATION,
-                _DEMANDA,
-                _PROCEDIMENTO,
-                _ANALISE,
-                _CONCLUSAO,
+                DocumentField(
+                    key="texto_relatorio",
+                    label="Texto do relatório",
+                    kind="prose",
+                    help_text=(
+                        "Texto corrido e contínuo do relatório, redigido pela própria IA à "
+                        "medida que a conversa avança, articulando de forma coesa a "
+                        "identificação da pessoa atendida, a descrição da demanda, o "
+                        "procedimento (técnicas e instrumentos utilizados), a análise "
+                        "técnica dos resultados e a conclusão."
+                    ),
+                ),
                 _REFERENCIAS,
             ],
         ),
@@ -117,16 +96,17 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
             fields=[
                 *_COMMON_HEADER_FIELDS,
                 DocumentField(
-                    key="equipe_profissional",
-                    label="Profissionais envolvidos",
-                    kind="textarea",
-                    help_text="Nome, formação e registro dos demais profissionais participantes.",
+                    key="texto_relatorio",
+                    label="Texto do relatório",
+                    kind="prose",
+                    help_text=(
+                        "Texto corrido e contínuo do relatório, redigido pela própria IA à "
+                        "medida que a conversa avança, articulando de forma coesa os "
+                        "demais profissionais envolvidos (nome, formação e registro), a "
+                        "identificação da pessoa atendida, a descrição da demanda, o "
+                        "procedimento, a análise técnica dos resultados e a conclusão."
+                    ),
                 ),
-                _COMMON_IDENTIFICATION,
-                _DEMANDA,
-                _PROCEDIMENTO,
-                _ANALISE,
-                _CONCLUSAO,
                 _REFERENCIAS,
             ],
         ),
@@ -137,18 +117,19 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
             description="Documento mais completo, com exposição minuciosa de exames, técnicas, análises e conclusões.",
             fields=[
                 *_COMMON_HEADER_FIELDS,
-                _COMMON_IDENTIFICATION,
-                _DEMANDA,
                 DocumentField(
-                    key="quesitos",
-                    label="Quesitos",
-                    kind="textarea",
-                    required=False,
-                    help_text="Perguntas formuladas por quem solicitou o laudo, quando houver.",
+                    key="texto_laudo",
+                    label="Texto do laudo",
+                    kind="prose",
+                    help_text=(
+                        "Texto corrido e contínuo do laudo, redigido pela própria IA à "
+                        "medida que a conversa avança, articulando de forma coesa a "
+                        "identificação da pessoa avaliada, a descrição da demanda, os "
+                        "quesitos formulados por quem solicitou o laudo (quando houver), o "
+                        "procedimento (exames, técnicas e instrumentos utilizados), a "
+                        "análise minuciosa dos resultados e a conclusão."
+                    ),
                 ),
-                _PROCEDIMENTO,
-                _ANALISE,
-                _CONCLUSAO,
                 _REFERENCIAS,
             ],
         ),
@@ -160,12 +141,16 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
             fields=[
                 *_COMMON_HEADER_FIELDS,
                 DocumentField(
-                    key="consulta",
-                    label="Consulta / quesito formulado",
-                    kind="textarea",
+                    key="texto_parecer",
+                    label="Texto do parecer",
+                    kind="prose",
+                    help_text=(
+                        "Texto corrido e contínuo do parecer, redigido pela própria IA à "
+                        "medida que a conversa avança, articulando de forma coesa a "
+                        "consulta ou quesito formulado, a análise técnica com base na "
+                        "revisão de informações já existentes e a conclusão."
+                    ),
                 ),
-                _ANALISE,
-                _CONCLUSAO,
                 _REFERENCIAS,
             ],
         ),
