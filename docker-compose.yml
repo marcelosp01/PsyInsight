@@ -1,0 +1,12 @@
+services:
+  psyinsight:
+    build: .
+    image: psyinsight:latest
+    container_name: psyinsight
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-me}

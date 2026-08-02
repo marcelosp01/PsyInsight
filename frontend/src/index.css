@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  /* Calm, low-saturation sage / slate palette to support focused clinical writing. */
+  --color-sage-50: #f4f7f5;
+  --color-sage-100: #e6ede8;
+  --color-sage-200: #cddbd2;
+  --color-sage-300: #a9c2b3;
+  --color-sage-400: #7fa38d;
+  --color-sage-500: #5e8570;
+  --color-sage-600: #4a6c5a;
+  --color-sage-700: #3c5748;
+  --color-sage-800: #32463c;
+  --color-sage-900: #2a3a32;
+
+  --color-slate-50: #f7f8f8;
+  --color-slate-100: #edf0f0;
+  --color-slate-200: #d9dfe0;
+  --color-slate-300: #b8c3c5;
+  --color-slate-400: #8fa0a3;
+  --color-slate-500: #6c7f83;
+  --color-slate-600: #556669;
+  --color-slate-700: #445254;
+  --color-slate-800: #384345;
+  --color-slate-900: #2b3335;
+
+  --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-sage-50);
+  color: var(--color-slate-800);
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #document-preview,
+  #document-preview * {
+    visibility: visible;
+  }
+
+  #document-preview {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+  }
+
+  .print-hide {
+    display: none !important;
+  }
+}

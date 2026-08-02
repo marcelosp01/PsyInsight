@@ -1,3 +1,6 @@
+# PsyInsight runtime SQLite database (recreated from scratch on every boot)
+backend/data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
