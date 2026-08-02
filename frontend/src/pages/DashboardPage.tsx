@@ -24,14 +24,12 @@ export function DashboardPage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveConfirmation, setSaveConfirmation] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [conversationKey, setConversationKey] = useState(0)
 
   useEffect(() => {
     api
       .documentTypes()
-      .then((types) => {
-        setDocumentTypes(types)
-        setSelectedSlug((current) => current || types[0]?.slug || '')
-      })
+      .then(setDocumentTypes)
       .finally(() => setIsLoadingTypes(false))
   }, [])
 
@@ -81,13 +79,19 @@ export function DashboardPage() {
     return true
   }
 
-  const handleDocumentTypeChange = (slug: string) => {
-    setSelectedSlug(slug)
+  const handleDocumentTypeResolved = (type: DocumentType) => {
+    setSelectedSlug(type.slug)
+  }
+
+  const handleStartNewDocument = () => {
+    setSelectedSlug('')
     setValues({})
     setDownloadError(null)
     setSavedDocumentId(null)
     setSavedDocumentTitle('')
+    setLoadError(null)
     setSearchParams({})
+    setConversationKey((key) => key + 1)
   }
 
   const handleDownload = async () => {
@@ -161,6 +165,12 @@ export function DashboardPage() {
             <p className="text-sm text-slate-500">Olá, {user?.name}</p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleStartNewDocument}
+              className="rounded-lg border border-nude-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-nude-100"
+            >
+              Novo laudo
+            </button>
             <Link
               to="/meus-laudos"
               className="rounded-lg border border-nude-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-nude-100"
@@ -178,78 +188,71 @@ export function DashboardPage() {
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-6">
-        <div className="print-hide mb-6">
-          <label htmlFor="document-type" className="block text-sm font-medium text-slate-700">
-            Modalidade do documento
-          </label>
-          <select
-            id="document-type"
-            value={selectedSlug}
-            onChange={(e) => handleDocumentTypeChange(e.target.value)}
-            className="mt-1 w-full max-w-md rounded-lg border border-nude-200 bg-white px-3 py-2 text-slate-800 focus:border-nude-500 focus:outline-none focus:ring-1 focus:ring-nude-500 sm:w-auto"
-          >
-            {documentTypes.map((type) => (
-              <option key={type.slug} value={type.slug}>
-                {type.name} ({type.article})
-              </option>
-            ))}
-          </select>
-          {selectedType && <p className="mt-2 max-w-2xl text-sm text-slate-500">{selectedType.description}</p>}
-          {savedDocumentTitle && (
-            <p className="print-hide mt-2 text-sm text-nude-700">
-              Editando laudo salvo: <span className="font-medium">{savedDocumentTitle}</span>
-            </p>
-          )}
-          {loadError && <p className="print-hide mt-2 text-sm text-red-700">{loadError}</p>}
-          {saveConfirmation && (
-            <p className="print-hide mt-2 text-sm text-nude-700">{saveConfirmation}</p>
-          )}
-        </div>
-
-        {selectedType && (
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-            <section className="print-hide">
-              <h2 className="mb-4 text-base font-semibold text-slate-700">Entrevista</h2>
-              <ChatPanel
-                key={`${selectedType.slug}-${savedDocumentId ?? 'new'}`}
-                documentType={selectedType}
-                savedDocumentId={savedDocumentId}
-                onValuesUpdate={setValues}
-              />
-            </section>
-
-            <section>
-              <div className="print-hide mb-4 flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-base font-semibold text-slate-700">Pré-visualização</h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleOpenSaveModal}
-                    className="rounded-lg border border-nude-300 px-4 py-2 text-sm font-medium text-nude-700 hover:bg-nude-100"
-                  >
-                    Salvar
-                  </button>
-                  <button
-                    onClick={handlePrint}
-                    className="rounded-lg border border-nude-300 px-4 py-2 text-sm font-medium text-nude-700 hover:bg-nude-100"
-                  >
-                    Imprimir
-                  </button>
-                  <button
-                    onClick={handleDownload}
-                    disabled={isDownloading}
-                    className="rounded-lg bg-nude-600 px-4 py-2 text-sm font-medium text-white hover:bg-nude-700 disabled:opacity-60"
-                  >
-                    {isDownloading ? 'Gerando...' : 'Baixar PDF'}
-                  </button>
-                </div>
-              </div>
-              {downloadError && (
-                <p className="print-hide mb-3 text-sm text-red-700">{downloadError}</p>
-              )}
-              <DocumentPreview documentType={selectedType} values={values} />
-            </section>
+        {(savedDocumentTitle || loadError || saveConfirmation) && (
+          <div className="print-hide mb-6">
+            {savedDocumentTitle && (
+              <p className="text-sm text-nude-700">
+                Editando laudo salvo: <span className="font-medium">{savedDocumentTitle}</span>
+              </p>
+            )}
+            {loadError && <p className="mt-2 text-sm text-red-700">{loadError}</p>}
+            {saveConfirmation && <p className="mt-2 text-sm text-nude-700">{saveConfirmation}</p>}
           </div>
         )}
+
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
+          <section className="print-hide">
+            <h2 className="mb-4 flex h-10 items-center text-base font-semibold text-slate-700">Entrevista</h2>
+            <ChatPanel
+              key={`${savedDocumentId ?? 'new'}-${conversationKey}`}
+              documentTypes={documentTypes}
+              initialDocumentType={selectedType}
+              savedDocumentId={savedDocumentId}
+              onDocumentTypeChange={handleDocumentTypeResolved}
+              onValuesUpdate={setValues}
+            />
+          </section>
+
+          <section>
+            <div className="print-hide mb-4 flex h-10 flex-wrap items-center justify-between gap-3">
+              <h2 className="text-base font-semibold text-slate-700">Pré-visualização</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleOpenSaveModal}
+                  disabled={!selectedType}
+                  className="rounded-lg border border-nude-300 px-4 py-2 text-sm font-medium text-nude-700 hover:bg-nude-100 disabled:opacity-60"
+                >
+                  Salvar
+                </button>
+                <button
+                  onClick={handlePrint}
+                  disabled={!selectedType}
+                  className="rounded-lg border border-nude-300 px-4 py-2 text-sm font-medium text-nude-700 hover:bg-nude-100 disabled:opacity-60"
+                >
+                  Imprimir
+                </button>
+                <button
+                  onClick={handleDownload}
+                  disabled={!selectedType || isDownloading}
+                  className="rounded-lg bg-nude-600 px-4 py-2 text-sm font-medium text-white hover:bg-nude-700 disabled:opacity-60"
+                >
+                  {isDownloading ? 'Gerando...' : 'Baixar PDF'}
+                </button>
+              </div>
+            </div>
+            {downloadError && (
+              <p className="print-hide mb-3 text-sm text-red-700">{downloadError}</p>
+            )}
+            {selectedType ? (
+              <DocumentPreview documentType={selectedType} values={values} />
+            ) : (
+              <div className="flex h-[75vh] items-center justify-center rounded-lg border border-dashed border-nude-300 bg-white/60 p-10 text-center text-sm text-slate-500">
+                A pré-visualização aparece assim que a modalidade do documento for definida na
+                conversa ao lado.
+              </div>
+            )}
+          </section>
+        </div>
       </main>
 
       {isSaveModalOpen && (

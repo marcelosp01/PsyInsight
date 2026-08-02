@@ -86,6 +86,20 @@ export const api = {
     createOrResumeSession: (payload: { document_type: string; saved_document_id?: number | null }) =>
       request<ChatSession>('/api/chat/sessions', { method: 'POST', body: JSON.stringify(payload) }),
 
+    async selectModality(
+      history: { role: 'user' | 'assistant'; content: string }[],
+      content: string | null,
+    ): Promise<Response> {
+      const response = await fetch('/api/chat/modality-selection', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history, content }),
+      })
+      await throwIfNotOk(response)
+      return response
+    },
+
     async sendMessage(sessionId: number, content: string | null): Promise<Response> {
       const response = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
         method: 'POST',

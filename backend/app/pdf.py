@@ -26,8 +26,9 @@ def render_document_pdf(document_type: DocumentTypeOut, values: dict[str, str]) 
         value = (values.get(field.key) or "").strip()
         if not value:
             continue
-        pdf.set_font("Helvetica", "B", 12)
-        _write_line(pdf, 8, field.label)
+        if field.kind != "prose":
+            pdf.set_font("Helvetica", "B", 12)
+            _write_line(pdf, 8, field.label)
         pdf.set_font("Helvetica", "", 11)
         _write_line(pdf, 6, value)
         pdf.ln(3)

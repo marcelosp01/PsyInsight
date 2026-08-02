@@ -1,4 +1,4 @@
-export type FieldKind = 'text' | 'textarea' | 'date'
+export type FieldKind = 'text' | 'textarea' | 'date' | 'prose'
 
 export interface DocumentField {
   key: string

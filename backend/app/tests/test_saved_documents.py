@@ -2,8 +2,7 @@ _VALID_VALUES = {
     "profissional_nome": "Ana Souza",
     "profissional_crp": "06/12345",
     "cidade_data": "São Paulo, 31 de julho de 2026",
-    "identificacao": "João da Silva, 30 anos.",
-    "teor_declaracao": "Compareceu a 4 sessões de atendimento psicológico.",
+    "texto_declaracao": "João da Silva, 30 anos, compareceu a 4 sessões de atendimento psicológico.",
 }
 
 
@@ -80,7 +79,7 @@ def test_get_saved_document_rejects_document_owned_by_another_user(signed_up_cli
 def test_update_saved_document_overwrites_title_and_values(signed_up_client):
     created = _create_saved_document(signed_up_client)
     document_id = created.json()["id"]
-    new_values = {**_VALID_VALUES, "identificacao": "Novo texto."}
+    new_values = {**_VALID_VALUES, "texto_declaracao": "Novo texto."}
 
     response = signed_up_client.put(
         f"/api/documents/saved/{document_id}",
