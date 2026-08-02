@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import { useAuth } from '../context/AuthContext'
-import { DocumentForm } from '../components/DocumentForm'
+import { ChatPanel } from '../components/ChatPanel'
 import { DocumentPreview } from '../components/DocumentPreview'
 import { SaveDocumentModal } from '../components/SaveDocumentModal'
 import type { DocumentType } from '../types/document'
@@ -13,7 +13,6 @@ export function DashboardPage() {
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([])
   const [selectedSlug, setSelectedSlug] = useState<string>('')
   const [values, setValues] = useState<Record<string, string>>({})
-  const [touchedKeys, setTouchedKeys] = useState<Set<string>>(new Set())
   const [isLoadingTypes, setIsLoadingTypes] = useState(true)
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
@@ -37,15 +36,6 @@ export function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    if (!user) return
-    setValues((current) => ({
-      ...current,
-      profissional_nome: current.profissional_nome || user.name,
-      profissional_crp: current.profissional_crp || user.crp,
-    }))
-  }, [user])
-
-  useEffect(() => {
     const laudoId = searchParams.get('laudoId')
     if (!laudoId) return
     let ignore = false
@@ -56,7 +46,6 @@ export function DashboardPage() {
         if (ignore) return
         setSelectedSlug(document.document_type)
         setValues(document.values)
-        setTouchedKeys(new Set())
         setSavedDocumentId(document.id)
         setSavedDocumentTitle(document.title)
       })
@@ -81,23 +70,11 @@ export function DashboardPage() {
     )
   }, [selectedType, values])
 
-  const handleChange = (key: string, value: string) => {
-    setValues((current) => ({ ...current, [key]: value }))
-  }
-
-  const handleBlur = (key: string) => {
-    setTouchedKeys((current) => new Set(current).add(key))
-  }
-
-  const markAllTouched = () => {
-    if (!selectedType) return
-    setTouchedKeys(new Set(selectedType.fields.map((field) => field.key)))
-  }
-
   const ensureRequiredFieldsFilled = (actionLabel: string): boolean => {
-    markAllTouched()
     if (missingRequiredFields.length > 0) {
-      setDownloadError(`Preencha todos os campos obrigatórios antes de ${actionLabel}.`)
+      setDownloadError(
+        `A conversa ainda precisa cobrir todos os campos obrigatórios antes de ${actionLabel}.`,
+      )
       return false
     }
     setDownloadError(null)
@@ -106,7 +83,7 @@ export function DashboardPage() {
 
   const handleDocumentTypeChange = (slug: string) => {
     setSelectedSlug(slug)
-    setTouchedKeys(new Set())
+    setValues({})
     setDownloadError(null)
     setSavedDocumentId(null)
     setSavedDocumentTitle('')
@@ -232,13 +209,12 @@ export function DashboardPage() {
         {selectedType && (
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
             <section className="print-hide">
-              <h2 className="mb-4 text-base font-semibold text-slate-700">Dados do documento</h2>
-              <DocumentForm
-                fields={selectedType.fields}
-                values={values}
-                touchedKeys={touchedKeys}
-                onChange={handleChange}
-                onBlur={handleBlur}
+              <h2 className="mb-4 text-base font-semibold text-slate-700">Entrevista</h2>
+              <ChatPanel
+                key={`${selectedType.slug}-${savedDocumentId ?? 'new'}`}
+                documentType={selectedType}
+                savedDocumentId={savedDocumentId}
+                onValuesUpdate={setValues}
               />
             </section>
 

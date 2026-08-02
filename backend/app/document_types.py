@@ -2,6 +2,8 @@
 Resolucao no 06/2019 (see /docs/Resolucao-CFP-n-06-2019-comentada.pdf).
 """
 
+from pydantic import BaseModel, Field, create_model
+
 from app.schemas import DocumentField, DocumentTypeOut
 
 _COMMON_HEADER_FIELDS = [
@@ -177,3 +179,34 @@ def list_document_types() -> list[DocumentTypeOut]:
 
 def get_document_type(slug: str) -> DocumentTypeOut | None:
     return DOCUMENT_TYPES.get(slug)
+
+
+def build_extraction_model(document_type: DocumentTypeOut) -> type[BaseModel]:
+    """Modelo Pydantic dinâmico usado como response_schema do Gemini para
+    extrair/atualizar os campos da modalidade a partir da conversa do chat.
+
+    Todos os campos são opcionais aqui de propósito: "obrigatório" no sentido
+    da Resolução CFP é regra de negócio de _validate_values (aplicada só ao
+    salvar/gerar PDF), não do schema de extração incremental do chat.
+    """
+    field_definitions: dict[str, tuple[type, object]] = {
+        field.key: (
+            str | None,
+            Field(
+                default=None,
+                description=field.label + (f" — {field.help_text}" if field.help_text else ""),
+            ),
+        )
+        for field in document_type.fields
+    }
+    field_definitions["memory_note"] = (
+        str | None,
+        Field(
+            default=None,
+            description=(
+                "Preencha apenas se o usuário pediu explicitamente para lembrar "
+                "algo para laudos futuros; caso contrário, deixe nulo."
+            ),
+        ),
+    )
+    return create_model(f"Extraction_{document_type.slug}", **field_definitions)

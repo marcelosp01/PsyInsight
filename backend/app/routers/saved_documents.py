@@ -4,13 +4,13 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.database import get_db
 from app.document_types import get_document_type
-from app.models import SavedDocument, User
+from app.models import ChatSession, SavedDocument, User
 from app.schemas import SavedDocumentCreate, SavedDocumentOut, SavedDocumentSummary, SavedDocumentUpdate
 
 router = APIRouter(prefix="/api/documents/saved", tags=["saved-documents"])
 
 
-def _get_owned_document(db: Session, document_id: int, current_user: User) -> SavedDocument:
+def get_owned_document(db: Session, document_id: int, current_user: User) -> SavedDocument:
     document = (
         db.query(SavedDocument)
         .filter(SavedDocument.id == document_id, SavedDocument.user_id == current_user.id)
@@ -81,7 +81,7 @@ def get_saved_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return _get_owned_document(db, document_id, current_user)
+    return get_owned_document(db, document_id, current_user)
 
 
 @router.put("/{document_id}", response_model=SavedDocumentOut)
@@ -91,7 +91,7 @@ def update_saved_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    document = _get_owned_document(db, document_id, current_user)
+    document = get_owned_document(db, document_id, current_user)
     if payload.values is not None:
         _validate_values(document.document_type, payload.values)
         document.values = payload.values
@@ -108,6 +108,11 @@ def delete_saved_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    document = _get_owned_document(db, document_id, current_user)
+    document = get_owned_document(db, document_id, current_user)
+    chat_session = (
+        db.query(ChatSession).filter(ChatSession.saved_document_id == document.id).first()
+    )
+    if chat_session is not None:
+        db.delete(chat_session)
     db.delete(document)
     db.commit()

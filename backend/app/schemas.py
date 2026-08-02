@@ -69,3 +69,31 @@ class SavedDocumentSummary(BaseModel):
 class SavedDocumentOut(SavedDocumentSummary):
     values: dict[str, str]
     created_at: datetime
+
+
+class ChatSessionCreate(BaseModel):
+    document_type: str
+    saved_document_id: int | None = None
+
+
+class ChatMessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    role: str
+    content: str
+    created_at: datetime
+
+
+class ChatSessionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    document_type: str
+    saved_document_id: int | None
+    values: dict[str, str]
+    messages: list[ChatMessageOut]
+
+
+class ChatMessageCreate(BaseModel):
+    content: str | None = Field(default=None, min_length=1, max_length=8000)

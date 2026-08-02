@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DashboardPage } from './DashboardPage'
 import { AuthProvider } from '../context/AuthContext'
 import { api, ApiError } from '../api/client'
-import type { DocumentType, SavedDocument } from '../types/document'
+import { makeSSEResponse } from '../test/sse'
+import type { ChatSession, DocumentType, SavedDocument } from '../types/document'
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client')
@@ -24,6 +25,10 @@ vi.mock('../api/client', async () => {
         create: vi.fn(),
         update: vi.fn(),
         remove: vi.fn(),
+      },
+      chat: {
+        createOrResumeSession: vi.fn(),
+        sendMessage: vi.fn(),
       },
     },
   }
@@ -85,6 +90,17 @@ function savedDocument(overrides: Partial<SavedDocument> = {}): SavedDocument {
   }
 }
 
+function chatSession(overrides: Partial<ChatSession> = {}): ChatSession {
+  return {
+    id: 1,
+    document_type: 'declaracao',
+    saved_document_id: null,
+    values: {},
+    messages: [{ id: 1, role: 'assistant', content: 'Olá! Vamos começar?', created_at: new Date().toISOString() }],
+    ...overrides,
+  }
+}
+
 function renderDashboard(initialEntries = ['/']) {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
@@ -100,19 +116,36 @@ describe('DashboardPage', () => {
     vi.clearAllMocks()
     vi.mocked(api.me).mockResolvedValue(loggedInUser)
     vi.mocked(api.documentTypes).mockResolvedValue(documentTypes)
+    vi.mocked(api.chat.createOrResumeSession).mockResolvedValue(chatSession())
+    vi.mocked(api.chat.sendMessage).mockResolvedValue(makeSSEResponse([{ type: 'done' }]))
   })
 
   it('keeps editing the same record after creating a saved document (id is persisted in the URL)', async () => {
     const created = savedDocument()
     vi.mocked(api.savedDocuments.create).mockResolvedValue(created)
     vi.mocked(api.savedDocuments.get).mockResolvedValue(created)
+    vi.mocked(api.chat.createOrResumeSession).mockResolvedValue(chatSession({ messages: [] }))
+    vi.mocked(api.chat.sendMessage).mockResolvedValue(
+      makeSSEResponse([
+        {
+          type: 'values',
+          values: {
+            profissional_nome: 'Ana Souza',
+            profissional_crp: '06/12345',
+            cidade_data: 'São Paulo, hoje',
+            identificacao: 'João',
+            teor_declaracao: 'Compareceu',
+          },
+        },
+        { type: 'done' },
+      ]),
+    )
     const user = userEvent.setup()
     renderDashboard()
 
-    await screen.findByText('Dados do documento')
-    await user.type(screen.getByLabelText(/Cidade e data/), 'São Paulo, hoje')
-    await user.type(screen.getByLabelText(/Identificação/), 'João')
-    await user.type(screen.getByLabelText(/Teor da declaração/), 'Compareceu')
+    await screen.findByText('Entrevista')
+    // A sessão nova (sem histórico) dispara automaticamente a primeira mensagem.
+    await waitFor(() => expect(screen.getByLabelText('Mensagem')).not.toBeDisabled())
 
     await user.click(screen.getByRole('button', { name: 'Salvar' }))
     await user.type(screen.getByLabelText('Título'), 'Meu laudo')
@@ -132,7 +165,7 @@ describe('DashboardPage', () => {
     const user = userEvent.setup()
     renderDashboard(['/?laudoId=1'])
 
-    await screen.findByText('Dados do documento')
+    await screen.findByText('Entrevista')
     await user.selectOptions(screen.getByLabelText('Modalidade do documento'), 'parecer')
 
     // The stale fetch for the old (declaração) saved document resolves late.
