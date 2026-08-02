@@ -1,4 +1,4 @@
-# PsyInsight runtime SQLite database (recreated from scratch on every boot)
+# PsyInsight runtime SQLite database (persisted via the psyinsight-data Docker volume)
 backend/data/
 
 # Byte-compiled / optimized / DLL files

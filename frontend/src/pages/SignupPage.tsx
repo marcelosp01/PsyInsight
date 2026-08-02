@@ -30,8 +30,8 @@ export function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-sage-50 px-4 py-8">
-      <div className="w-full max-w-sm rounded-2xl border border-sage-200 bg-white p-8 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-nude-50 px-4 py-8">
+      <div className="w-full max-w-sm rounded-2xl border border-nude-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-semibold text-slate-800">Criar conta</h1>
         <p className="mt-1 text-sm text-slate-500">Cadastre-se para começar a usar o PsyInsight.</p>
 
@@ -46,7 +46,7 @@ export function SignupPage() {
               minLength={2}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-sage-200 px-3 py-2 text-slate-800 focus:border-sage-500 focus:outline-none focus:ring-1 focus:ring-sage-500"
+              className="mt-1 w-full rounded-lg border border-nude-200 px-3 py-2 text-slate-800 focus:border-nude-500 focus:outline-none focus:ring-1 focus:ring-nude-500"
             />
           </div>
 
@@ -60,7 +60,7 @@ export function SignupPage() {
               placeholder="Ex.: 06/12345"
               value={crp}
               onChange={(e) => setCrp(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-sage-200 px-3 py-2 text-slate-800 focus:border-sage-500 focus:outline-none focus:ring-1 focus:ring-sage-500"
+              className="mt-1 w-full rounded-lg border border-nude-200 px-3 py-2 text-slate-800 focus:border-nude-500 focus:outline-none focus:ring-1 focus:ring-nude-500"
             />
           </div>
 
@@ -74,7 +74,7 @@ export function SignupPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-sage-200 px-3 py-2 text-slate-800 focus:border-sage-500 focus:outline-none focus:ring-1 focus:ring-sage-500"
+              className="mt-1 w-full rounded-lg border border-nude-200 px-3 py-2 text-slate-800 focus:border-nude-500 focus:outline-none focus:ring-1 focus:ring-nude-500"
             />
           </div>
 
@@ -89,7 +89,7 @@ export function SignupPage() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-sage-200 px-3 py-2 text-slate-800 focus:border-sage-500 focus:outline-none focus:ring-1 focus:ring-sage-500"
+              className="mt-1 w-full rounded-lg border border-nude-200 px-3 py-2 text-slate-800 focus:border-nude-500 focus:outline-none focus:ring-1 focus:ring-nude-500"
             />
             <p className="mt-1 text-xs text-slate-400">Mínimo de 8 caracteres.</p>
           </div>
@@ -99,7 +99,7 @@ export function SignupPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-lg bg-sage-600 px-4 py-2 font-medium text-white transition hover:bg-sage-700 disabled:opacity-60"
+            className="w-full rounded-lg bg-nude-600 px-4 py-2 font-medium text-white transition hover:bg-nude-700 disabled:opacity-60"
           >
             {isSubmitting ? 'Criando conta...' : 'Criar conta'}
           </button>
@@ -107,7 +107,7 @@ export function SignupPage() {
 
         <p className="mt-6 text-center text-sm text-slate-500">
           Já tem conta?{' '}
-          <Link to="/login" className="font-medium text-sage-600 hover:underline">
+          <Link to="/login" className="font-medium text-nude-600 hover:underline">
             Entrar
           </Link>
         </p>

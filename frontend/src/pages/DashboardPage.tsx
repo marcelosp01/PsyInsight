@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { DocumentForm } from '../components/DocumentForm'
 import { DocumentPreview } from '../components/DocumentPreview'
+import { SaveDocumentModal } from '../components/SaveDocumentModal'
 import type { DocumentType } from '../types/document'
 
 export function DashboardPage() {
   const { user, logout } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([])
   const [selectedSlug, setSelectedSlug] = useState<string>('')
   const [values, setValues] = useState<Record<string, string>>({})
@@ -14,6 +17,14 @@ export function DashboardPage() {
   const [isLoadingTypes, setIsLoadingTypes] = useState(true)
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
+
+  const [savedDocumentId, setSavedDocumentId] = useState<number | null>(null)
+  const [savedDocumentTitle, setSavedDocumentTitle] = useState<string>('')
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveConfirmation, setSaveConfirmation] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     api
@@ -33,6 +44,30 @@ export function DashboardPage() {
       profissional_crp: current.profissional_crp || user.crp,
     }))
   }, [user])
+
+  useEffect(() => {
+    const laudoId = searchParams.get('laudoId')
+    if (!laudoId) return
+    let ignore = false
+    setLoadError(null)
+    api.savedDocuments
+      .get(Number(laudoId))
+      .then((document) => {
+        if (ignore) return
+        setSelectedSlug(document.document_type)
+        setValues(document.values)
+        setTouchedKeys(new Set())
+        setSavedDocumentId(document.id)
+        setSavedDocumentTitle(document.title)
+      })
+      .catch((err) => {
+        if (ignore) return
+        setLoadError(err instanceof ApiError ? err.message : 'Não foi possível carregar o laudo salvo.')
+      })
+    return () => {
+      ignore = true
+    }
+  }, [searchParams])
 
   const selectedType = useMemo(
     () => documentTypes.find((type) => type.slug === selectedSlug) ?? null,
@@ -59,15 +94,29 @@ export function DashboardPage() {
     setTouchedKeys(new Set(selectedType.fields.map((field) => field.key)))
   }
 
-  const handleDownload = async () => {
-    if (!selectedType) return
+  const ensureRequiredFieldsFilled = (actionLabel: string): boolean => {
     markAllTouched()
     if (missingRequiredFields.length > 0) {
-      setDownloadError('Preencha todos os campos obrigatórios antes de baixar o PDF.')
-      return
+      setDownloadError(`Preencha todos os campos obrigatórios antes de ${actionLabel}.`)
+      return false
     }
-
     setDownloadError(null)
+    return true
+  }
+
+  const handleDocumentTypeChange = (slug: string) => {
+    setSelectedSlug(slug)
+    setTouchedKeys(new Set())
+    setDownloadError(null)
+    setSavedDocumentId(null)
+    setSavedDocumentTitle('')
+    setSearchParams({})
+  }
+
+  const handleDownload = async () => {
+    if (!selectedType) return
+    if (!ensureRequiredFieldsFilled('baixar o PDF')) return
+
     setIsDownloading(true)
     try {
       const blob = await api.generatePdf(selectedType.slug, values)
@@ -85,13 +134,39 @@ export function DashboardPage() {
   }
 
   const handlePrint = () => {
-    markAllTouched()
-    if (missingRequiredFields.length > 0) {
-      setDownloadError('Preencha todos os campos obrigatórios antes de imprimir.')
-      return
-    }
-    setDownloadError(null)
+    if (!ensureRequiredFieldsFilled('imprimir')) return
     window.print()
+  }
+
+  const handleOpenSaveModal = () => {
+    if (!selectedType) return
+    if (!ensureRequiredFieldsFilled('salvar')) return
+    setSaveError(null)
+    setIsSaveModalOpen(true)
+  }
+
+  const handleConfirmSave = async (title: string) => {
+    if (!selectedType) return
+    const isCreating = savedDocumentId === null
+    setIsSaving(true)
+    setSaveError(null)
+    try {
+      const saved = savedDocumentId
+        ? await api.savedDocuments.update(savedDocumentId, { title, values })
+        : await api.savedDocuments.create({ title, document_type: selectedType.slug, values })
+      setSavedDocumentId(saved.id)
+      setSavedDocumentTitle(saved.title)
+      if (isCreating) {
+        setSearchParams({ laudoId: String(saved.id) })
+      }
+      setIsSaveModalOpen(false)
+      setSaveConfirmation(`"${saved.title}" salvo em Meus Laudos.`)
+      setTimeout(() => setSaveConfirmation(null), 4000)
+    } catch (err) {
+      setSaveError(err instanceof ApiError ? err.message : 'Não foi possível salvar o laudo.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   if (isLoadingTypes) {
@@ -101,19 +176,27 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-sage-50">
-      <header className="print-hide border-b border-sage-200 bg-white">
+    <div className="min-h-screen bg-nude-50">
+      <header className="print-hide border-b border-nude-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div>
             <h1 className="text-lg font-semibold text-slate-800">PsyInsight</h1>
             <p className="text-sm text-slate-500">Olá, {user?.name}</p>
           </div>
-          <button
-            onClick={() => logout()}
-            className="rounded-lg border border-sage-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-sage-100"
-          >
-            Sair
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/meus-laudos"
+              className="rounded-lg border border-nude-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-nude-100"
+            >
+              Meus Laudos
+            </Link>
+            <button
+              onClick={() => logout()}
+              className="rounded-lg border border-nude-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-nude-100"
+            >
+              Sair
+            </button>
+          </div>
         </div>
       </header>
 
@@ -125,12 +208,8 @@ export function DashboardPage() {
           <select
             id="document-type"
             value={selectedSlug}
-            onChange={(e) => {
-              setSelectedSlug(e.target.value)
-              setTouchedKeys(new Set())
-              setDownloadError(null)
-            }}
-            className="mt-1 w-full max-w-md rounded-lg border border-sage-200 bg-white px-3 py-2 text-slate-800 focus:border-sage-500 focus:outline-none focus:ring-1 focus:ring-sage-500 sm:w-auto"
+            onChange={(e) => handleDocumentTypeChange(e.target.value)}
+            className="mt-1 w-full max-w-md rounded-lg border border-nude-200 bg-white px-3 py-2 text-slate-800 focus:border-nude-500 focus:outline-none focus:ring-1 focus:ring-nude-500 sm:w-auto"
           >
             {documentTypes.map((type) => (
               <option key={type.slug} value={type.slug}>
@@ -139,6 +218,15 @@ export function DashboardPage() {
             ))}
           </select>
           {selectedType && <p className="mt-2 max-w-2xl text-sm text-slate-500">{selectedType.description}</p>}
+          {savedDocumentTitle && (
+            <p className="print-hide mt-2 text-sm text-nude-700">
+              Editando laudo salvo: <span className="font-medium">{savedDocumentTitle}</span>
+            </p>
+          )}
+          {loadError && <p className="print-hide mt-2 text-sm text-red-700">{loadError}</p>}
+          {saveConfirmation && (
+            <p className="print-hide mt-2 text-sm text-nude-700">{saveConfirmation}</p>
+          )}
         </div>
 
         {selectedType && (
@@ -159,15 +247,21 @@ export function DashboardPage() {
                 <h2 className="text-base font-semibold text-slate-700">Pré-visualização</h2>
                 <div className="flex gap-2">
                   <button
+                    onClick={handleOpenSaveModal}
+                    className="rounded-lg border border-nude-300 px-4 py-2 text-sm font-medium text-nude-700 hover:bg-nude-100"
+                  >
+                    Salvar
+                  </button>
+                  <button
                     onClick={handlePrint}
-                    className="rounded-lg border border-sage-300 px-4 py-2 text-sm font-medium text-sage-700 hover:bg-sage-100"
+                    className="rounded-lg border border-nude-300 px-4 py-2 text-sm font-medium text-nude-700 hover:bg-nude-100"
                   >
                     Imprimir
                   </button>
                   <button
                     onClick={handleDownload}
                     disabled={isDownloading}
-                    className="rounded-lg bg-sage-600 px-4 py-2 text-sm font-medium text-white hover:bg-sage-700 disabled:opacity-60"
+                    className="rounded-lg bg-nude-600 px-4 py-2 text-sm font-medium text-white hover:bg-nude-700 disabled:opacity-60"
                   >
                     {isDownloading ? 'Gerando...' : 'Baixar PDF'}
                   </button>
@@ -181,6 +275,16 @@ export function DashboardPage() {
           </div>
         )}
       </main>
+
+      {isSaveModalOpen && (
+        <SaveDocumentModal
+          initialTitle={savedDocumentTitle || `${selectedType?.name ?? ''} - ${new Date().toLocaleDateString('pt-BR')}`}
+          isSaving={isSaving}
+          error={saveError}
+          onCancel={() => setIsSaveModalOpen(false)}
+          onConfirm={handleConfirmSave}
+        />
+      )}
     </div>
   )
 }

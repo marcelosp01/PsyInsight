@@ -44,3 +44,28 @@ class DocumentTypeOut(BaseModel):
 class DocumentGenerateRequest(BaseModel):
     document_type: str
     values: dict[str, str]
+
+
+class SavedDocumentCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    document_type: str
+    values: dict[str, str]
+
+
+class SavedDocumentUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    values: dict[str, str] | None = None
+
+
+class SavedDocumentSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    title: str
+    document_type: str
+    updated_at: datetime
+
+
+class SavedDocumentOut(SavedDocumentSummary):
+    values: dict[str, str]
+    created_at: datetime

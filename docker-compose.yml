@@ -10,3 +10,8 @@ services:
         required: false
     environment:
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-me}
+    volumes:
+      - psyinsight-data:/app/backend/data
+
+volumes:
+  psyinsight-data:

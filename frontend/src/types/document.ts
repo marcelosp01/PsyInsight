@@ -23,3 +23,15 @@ export interface User {
   crp: string
   created_at: string
 }
+
+export interface SavedDocumentSummary {
+  id: number
+  title: string
+  document_type: string
+  updated_at: string
+}
+
+export interface SavedDocument extends SavedDocumentSummary {
+  values: Record<string, string>
+  created_at: string
+}

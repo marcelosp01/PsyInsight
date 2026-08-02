@@ -24,9 +24,16 @@ def get_db():
         db.close()
 
 
+def init_database() -> None:
+    """Create any missing tables without touching existing data. Called on
+    app startup so usuarios e laudos salvos sobrevivem a restarts do contêiner."""
+    import app.models  # noqa: F401  (ensure models are registered on Base)
+
+    Base.metadata.create_all(bind=engine)
+
+
 def reset_database() -> None:
-    """Drop and recreate all tables. Called on app startup so each container
-    boots with a clean database, per project requirements."""
+    """Drop and recreate all tables. Used to isolate each test run."""
     import app.models  # noqa: F401  (ensure models are registered on Base)
 
     Base.metadata.drop_all(bind=engine)

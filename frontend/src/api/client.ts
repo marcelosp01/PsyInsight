@@ -1,4 +1,4 @@
-import type { DocumentType, User } from '../types/document'
+import type { DocumentType, SavedDocument, SavedDocumentSummary, User } from '../types/document'
 
 export class ApiError extends Error {
   status: number
@@ -58,6 +58,26 @@ export const api = {
   me: () => request<User>('/api/auth/me'),
 
   documentTypes: () => request<DocumentType[]>('/api/documents/types'),
+
+  savedDocuments: {
+    list: () => request<SavedDocumentSummary[]>('/api/documents/saved'),
+
+    get: (id: number) => request<SavedDocument>(`/api/documents/saved/${id}`),
+
+    create: (payload: { title: string; document_type: string; values: Record<string, string> }) =>
+      request<SavedDocument>('/api/documents/saved', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+
+    update: (id: number, payload: { title?: string; values?: Record<string, string> }) =>
+      request<SavedDocument>(`/api/documents/saved/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      }),
+
+    remove: (id: number) => request<void>(`/api/documents/saved/${id}`, { method: 'DELETE' }),
+  },
 
   async generatePdf(documentType: string, values: Record<string, string>): Promise<Blob> {
     const response = await fetch('/api/documents/pdf', {
