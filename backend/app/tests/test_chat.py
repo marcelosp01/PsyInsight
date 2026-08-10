@@ -1,6 +1,8 @@
 import json
+from types import SimpleNamespace
 
 from app import gemini_client
+from app.chat_service import build_signature_values
 
 _VALID_VALUES = {
     "profissional_nome": "Ana Souza",
@@ -8,6 +10,8 @@ _VALID_VALUES = {
     "cidade_data": "São Paulo, 31 de julho de 2026",
     "texto_declaracao": "João da Silva, 30 anos, compareceu a 4 sessões de atendimento psicológico.",
 }
+
+_SIGNED_UP_USER = SimpleNamespace(name="Ana Souza", crp="06/12345", local_atendimento="")
 
 
 def _iter_events(response):
@@ -65,7 +69,7 @@ def test_create_new_session_seeds_professional_data_from_current_user(signed_up_
 
     assert response.status_code == 201
     body = response.json()
-    assert body["values"] == {"profissional_nome": "Ana Souza", "profissional_crp": "06/12345"}
+    assert body["values"] == build_signature_values(_SIGNED_UP_USER)
     assert body["messages"] == []
     assert body["saved_document_id"] is None
 
@@ -79,7 +83,13 @@ def test_create_session_from_saved_document_seeds_values(signed_up_client):
 
     assert response.status_code == 201
     body = response.json()
-    assert body["values"] == _VALID_VALUES
+    # O bloco de assinatura (nome/CRP/local e data) é sempre recalculado a
+    # partir do perfil + data de hoje, sobrescrevendo o que estava salvo;
+    # os demais campos permanecem como estavam.
+    assert body["values"]["texto_declaracao"] == _VALID_VALUES["texto_declaracao"]
+    assert {
+        key: body["values"][key] for key in ("profissional_nome", "profissional_crp", "cidade_data")
+    } == build_signature_values(_SIGNED_UP_USER)
     assert body["saved_document_id"] == saved["id"]
 
 
@@ -91,6 +101,17 @@ def test_create_session_from_saved_document_resumes_existing_session(signed_up_c
     second = signed_up_client.post("/api/chat/sessions", json=payload).json()
 
     assert first["id"] == second["id"]
+
+
+def test_resuming_existing_session_refreshes_signature_values(signed_up_client):
+    saved = _create_saved_document(signed_up_client)
+    payload = {"document_type": "declaracao", "saved_document_id": saved["id"]}
+    signed_up_client.post("/api/chat/sessions", json=payload)
+
+    signed_up_client.put("/api/auth/me", json={"local_atendimento": "Recife - PE"})
+    resumed = signed_up_client.post("/api/chat/sessions", json=payload).json()
+
+    assert "Recife - PE" in resumed["values"]["cidade_data"]
 
 
 def test_create_session_rejects_saved_document_owned_by_another_user(signed_up_client):

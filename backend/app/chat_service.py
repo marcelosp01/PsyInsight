@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from datetime import date
 from typing import Any
 
 from pydantic import BaseModel, Field, create_model
@@ -6,8 +7,40 @@ from pydantic import BaseModel, Field, create_model
 from app import gemini_client
 from app.database import SessionLocal
 from app.document_types import DOCUMENT_TYPES, build_extraction_model, list_document_types
-from app.models import ChatMessage, ChatSession, UserMemory
+from app.models import ChatMessage, ChatSession, User, UserMemory
 from app.schemas import DocumentTypeOut
+
+_MESES_PT = {
+    1: "janeiro",
+    2: "fevereiro",
+    3: "março",
+    4: "abril",
+    5: "maio",
+    6: "junho",
+    7: "julho",
+    8: "agosto",
+    9: "setembro",
+    10: "outubro",
+    11: "novembro",
+    12: "dezembro",
+}
+
+
+def _format_cidade_data(local_atendimento: str, today: date) -> str:
+    data_str = f"{today.day} de {_MESES_PT[today.month]} de {today.year}"
+    local = local_atendimento.strip()
+    return f"{local}, {data_str}" if local else data_str
+
+
+def build_signature_values(user: User) -> dict[str, str]:
+    """Bloco de assinatura (nome, CRP, local e data) preenchido automaticamente a
+    partir do perfil do usuário e da data de hoje — nunca perguntado pela IA
+    (ver `DocumentField.auto_filled`)."""
+    return {
+        "profissional_nome": user.name,
+        "profissional_crp": user.crp,
+        "cidade_data": _format_cidade_data(user.local_atendimento, date.today()),
+    }
 
 
 def _role_for_gemini(role: str) -> str:
@@ -102,7 +135,7 @@ def build_chat_instruction(
         "\n".join(
             f"- {field.label}: {values[field.key]}"
             for field in document_type.fields
-            if (values.get(field.key) or "").strip()
+            if not field.auto_filled and (values.get(field.key) or "").strip()
         )
         or "(nenhum campo preenchido ainda)"
     )
@@ -111,7 +144,7 @@ def build_chat_instruction(
             f"- {field.label}{' (obrigatório)' if field.required else ''}"
             + (f" — {field.help_text}" if field.help_text else "")
             for field in document_type.fields
-            if not (values.get(field.key) or "").strip()
+            if not field.auto_filled and not (values.get(field.key) or "").strip()
         )
         or "(todos os campos já têm alguma informação)"
     )

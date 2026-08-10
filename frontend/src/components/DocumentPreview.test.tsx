@@ -9,8 +9,8 @@ const documentType: DocumentType = {
   article: 'Art. 9º',
   description: 'Confirma um atendimento.',
   fields: [
-    { key: 'profissional_nome', label: 'Nome do(a) psicólogo(a)', kind: 'text', required: true, help_text: null },
-    { key: 'texto_declaracao', label: 'Texto da declaração', kind: 'prose', required: true, help_text: null },
+    { key: 'profissional_nome', label: 'Nome do(a) psicólogo(a)', kind: 'text', required: true, help_text: null, auto_filled: true },
+    { key: 'texto_declaracao', label: 'Texto da declaração', kind: 'prose', required: true, help_text: null, auto_filled: false },
   ],
 }
 

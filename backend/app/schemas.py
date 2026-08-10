@@ -22,7 +22,14 @@ class UserOut(BaseModel):
     name: str
     email: EmailStr
     crp: str
+    local_atendimento: str
     created_at: datetime
+
+
+class UserUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=255)
+    crp: str | None = Field(default=None, min_length=2, max_length=50)
+    local_atendimento: str | None = Field(default=None, max_length=255)
 
 
 class DocumentField(BaseModel):
@@ -31,6 +38,9 @@ class DocumentField(BaseModel):
     kind: str  # "text" | "textarea" | "date" | "prose" (texto corrido, sem rótulo de campo na pré-visualização/PDF)
     required: bool = True
     help_text: str | None = None
+    # Preenchido automaticamente pelo backend (ex.: bloco de assinatura a partir
+    # do perfil do usuário) — nunca é perguntado pela IA nem enviado a ela.
+    auto_filled: bool = False
 
 
 class DocumentTypeOut(BaseModel):

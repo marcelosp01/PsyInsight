@@ -52,10 +52,10 @@ const documentTypes: DocumentType[] = [
     article: 'Art. 9º',
     description: 'Confirma a ocorrência de um atendimento psicológico.',
     fields: [
-      { key: 'profissional_nome', label: 'Nome do(a) psicólogo(a)', kind: 'text', required: true, help_text: null },
-      { key: 'profissional_crp', label: 'CRP', kind: 'text', required: true, help_text: null },
-      { key: 'cidade_data', label: 'Cidade e data', kind: 'text', required: true, help_text: null },
-      { key: 'texto_declaracao', label: 'Texto da declaração', kind: 'prose', required: true, help_text: null },
+      { key: 'texto_declaracao', label: 'Texto da declaração', kind: 'prose', required: true, help_text: null, auto_filled: false },
+      { key: 'profissional_nome', label: 'Nome do(a) psicólogo(a)', kind: 'text', required: true, help_text: null, auto_filled: true },
+      { key: 'profissional_crp', label: 'CRP', kind: 'text', required: true, help_text: null, auto_filled: true },
+      { key: 'cidade_data', label: 'Local e data', kind: 'text', required: true, help_text: null, auto_filled: true },
     ],
   },
   {
@@ -64,8 +64,8 @@ const documentTypes: DocumentType[] = [
     article: 'Art. 14',
     description: 'Resposta técnica a uma consulta específica.',
     fields: [
-      { key: 'profissional_nome', label: 'Nome do(a) psicólogo(a)', kind: 'text', required: true, help_text: null },
-      { key: 'texto_parecer', label: 'Texto do parecer', kind: 'prose', required: true, help_text: null },
+      { key: 'texto_parecer', label: 'Texto do parecer', kind: 'prose', required: true, help_text: null, auto_filled: false },
+      { key: 'profissional_nome', label: 'Nome do(a) psicólogo(a)', kind: 'text', required: true, help_text: null, auto_filled: true },
     ],
   },
 ]
@@ -75,6 +75,7 @@ const loggedInUser = {
   name: 'Ana Souza',
   email: 'ana@example.com',
   crp: '06/12345',
+  local_atendimento: '',
   created_at: new Date().toISOString(),
 }
 
@@ -124,6 +125,15 @@ describe('DashboardPage', () => {
     )
     vi.mocked(api.chat.createOrResumeSession).mockResolvedValue(chatSession())
     vi.mocked(api.chat.sendMessage).mockResolvedValue(makeSSEResponse([{ type: 'done' }]))
+  })
+
+  it('links to the profile page', async () => {
+    renderDashboard()
+
+    expect(await screen.findByRole('link', { name: 'Meu Perfil' })).toHaveAttribute(
+      'href',
+      '/perfil',
+    )
   })
 
   it('starts without a preview until the chat resolves the document modality', async () => {

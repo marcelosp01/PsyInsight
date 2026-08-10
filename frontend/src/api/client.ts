@@ -49,6 +49,12 @@ export interface LoginPayload {
   password: string
 }
 
+export interface UpdateProfilePayload {
+  name?: string
+  crp?: string
+  local_atendimento?: string
+}
+
 export const api = {
   signup: (payload: SignupPayload) =>
     request<User>('/api/auth/signup', { method: 'POST', body: JSON.stringify(payload) }),
@@ -59,6 +65,9 @@ export const api = {
   logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
 
   me: () => request<User>('/api/auth/me'),
+
+  updateProfile: (payload: UpdateProfilePayload) =>
+    request<User>('/api/auth/me', { method: 'PUT', body: JSON.stringify(payload) }),
 
   documentTypes: () => request<DocumentType[]>('/api/documents/types'),
 

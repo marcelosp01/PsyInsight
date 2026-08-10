@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
-from app.chat_service import run_chat_turn, run_modality_selection_turn
+from app.chat_service import build_signature_values, run_chat_turn, run_modality_selection_turn
 from app.database import get_db
 from app.document_types import get_document_type
 from app.models import ChatSession, User, UserMemory
@@ -65,6 +65,11 @@ def create_or_resume_session(
             status_code=status.HTTP_404_NOT_FOUND, detail="Modalidade de documento desconhecida."
         )
 
+    # Sempre recalculado a partir do perfil atual + data de hoje: o bloco de
+    # assinatura nunca fica "congelado" com dados antigos do usuário ou de uma
+    # data passada, mesmo ao reabrir uma conversa/laudo já existente.
+    signature_values = build_signature_values(current_user)
+
     if payload.saved_document_id is not None:
         saved_document = get_owned_document(db, payload.saved_document_id, current_user)
         existing = (
@@ -76,21 +81,21 @@ def create_or_resume_session(
             .first()
         )
         if existing is not None:
+            existing.values = {**existing.values, **signature_values}
+            db.commit()
+            db.refresh(existing)
             return existing
         session = ChatSession(
             user_id=current_user.id,
             document_type=saved_document.document_type,
             saved_document_id=saved_document.id,
-            values=dict(saved_document.values),
+            values={**saved_document.values, **signature_values},
         )
     else:
         session = ChatSession(
             user_id=current_user.id,
             document_type=document_type.slug,
-            values={
-                "profissional_nome": current_user.name,
-                "profissional_crp": current_user.crp,
-            },
+            values=signature_values,
         )
 
     db.add(session)

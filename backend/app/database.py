@@ -30,6 +30,20 @@ def init_database() -> None:
     import app.models  # noqa: F401  (ensure models are registered on Base)
 
     Base.metadata.create_all(bind=engine)
+    _ensure_user_local_atendimento_column()
+
+
+def _ensure_user_local_atendimento_column() -> None:
+    """`create_all` só cria tabelas que ainda não existem — não adiciona colunas
+    novas a tabelas já existentes. Sem isso, um banco criado antes do PSYIN-4
+    nunca ganharia a coluna `local_atendimento` sem apagar os dados."""
+    with engine.connect() as connection:
+        columns = {row[1] for row in connection.exec_driver_sql("PRAGMA table_info(users)")}
+        if "local_atendimento" not in columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN local_atendimento VARCHAR(255) NOT NULL DEFAULT ''"
+            )
+            connection.commit()
 
 
 def reset_database() -> None:
