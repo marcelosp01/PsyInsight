@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, create_model
 
-from app import gemini_client
+from app import gemini_client, psychological_tests
 from app.database import SessionLocal
 from app.document_types import DOCUMENT_TYPES, build_extraction_model, list_document_types
 from app.models import ChatMessage, ChatSession, User, UserMemory
@@ -128,6 +128,34 @@ async def run_modality_selection_turn(
     yield {"type": "done"}
 
 
+_TEST_SUGGESTION_RULES = (
+    "Você também pode sugerir testes psicológicos pertinentes ao caso, como apoio "
+    "ao raciocínio clínico do(a) psicólogo(a) — nunca como decisão automática: a "
+    "escolha final de qual instrumento aplicar é sempre do profissional.\n\n"
+    "Quando o(a) psicólogo(a) descrever observações clínicas do paciente com "
+    "detalhe suficiente (queixa, contexto, faixa etária, finalidade), inclua na "
+    "sua própria resposta, em texto corrido:\n"
+    "- o nome do teste ou constructo recomendado;\n"
+    "- uma breve justificativa de escolha alinhada às observações enviadas;\n"
+    "- um lembrete de que o instrumento deve ser checado como favorável no "
+    "SATEPSI (Sistema de Avaliação de Testes Psicológicos do CFP) antes do uso.\n\n"
+    "Se a descrição do paciente ainda for vaga ou curta demais para justificar "
+    "uma sugestão, não sugira nada — peça mais detalhes clínicos específicos.\n\n"
+    "Só sugira testes desta lista; nunca cite um teste fora dela. Se nenhum "
+    "teste da lista for adequado ao caso, diga isso explicitamente em vez de "
+    "recorrer a outro instrumento:\n"
+)
+
+
+def build_test_suggestion_instruction(document_type_slug: str) -> str:
+    """Instrução de sugestão de testes psicológicos (PSYIN-5), só para as
+    modalidades em que a Resolução CFP prevê menção a instrumentos de
+    avaliação (`psychological_tests.supports_test_suggestions`)."""
+    if not psychological_tests.supports_test_suggestions(document_type_slug):
+        return ""
+    return _TEST_SUGGESTION_RULES + psychological_tests.format_tests_for_prompt()
+
+
 def build_chat_instruction(
     document_type: DocumentTypeOut, values: dict[str, str], memory: str
 ) -> str:
@@ -154,6 +182,8 @@ def build_chat_instruction(
         if memory.strip()
         else ""
     )
+    test_suggestion_text = build_test_suggestion_instruction(document_type.slug)
+    test_suggestion_block = f"\n\n{test_suggestion_text}" if test_suggestion_text else ""
 
     return (
         f'Você é um assistente que entrevista um(a) psicólogo(a) para redigir um documento do '
@@ -166,10 +196,21 @@ def build_chat_instruction(
         "de padronização para laudos futuros, confirme que vai lembrar.\n\n"
         f"Campos já preenchidos:\n{filled}\n\nCampos que ainda faltam:\n{pending}"
         f"{memory_block}"
+        f"{test_suggestion_block}"
     )
 
 
 def build_extraction_instruction(document_type: DocumentTypeOut) -> str:
+    test_suggestion_caveat = (
+        "\n\nDurante a conversa, o assistente pode ter sugerido testes psicológicos como "
+        "apoio ao raciocínio clínico (nome do teste, justificativa, lembrete de checagem "
+        "no SATEPSI) — essas sugestões NÃO significam que o instrumento foi aplicado. Ao "
+        "redigir o procedimento/instrumentos utilizados no corpo do documento, cite apenas "
+        "os testes que o(a) próprio(a) profissional confirmou explicitamente ter aplicado; "
+        "nunca inclua um teste só porque foi sugerido pelo assistente na conversa."
+        if psychological_tests.supports_test_suggestions(document_type.slug)
+        else ""
+    )
     return (
         "A seguir está uma conversa entre um(a) psicólogo(a) e um assistente sobre um "
         f'documento do tipo "{document_type.name}". Extraia, para cada campo, o valor mais '
@@ -181,6 +222,7 @@ def build_extraction_instruction(document_type: DocumentTypeOut) -> str:
         "profissional — e atualize-o por completo a cada novo turno, incorporando as "
         "informações mais recentes. Preencha 'memory_note' apenas se o profissional pediu "
         "explicitamente para lembrar de algo para laudos futuros; caso contrário, deixe nulo."
+        f"{test_suggestion_caveat}"
     )
 
 
