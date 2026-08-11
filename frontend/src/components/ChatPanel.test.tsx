@@ -26,7 +26,7 @@ const declaracao: DocumentType = {
   article: 'Art. 9º',
   description: 'Confirma a ocorrência de um atendimento psicológico.',
   fields: [
-    { key: 'texto_declaracao', label: 'Texto da declaração', kind: 'prose', required: true, help_text: null },
+    { key: 'texto_declaracao', label: 'Texto da declaração', kind: 'prose', required: true, help_text: null, auto_filled: false },
   ],
 }
 
@@ -35,7 +35,7 @@ const parecer: DocumentType = {
   name: 'Parecer Psicológico',
   article: 'Art. 14',
   description: 'Resposta técnica a uma consulta específica.',
-  fields: [{ key: 'consulta', label: 'Consulta', kind: 'textarea', required: true, help_text: null }],
+  fields: [{ key: 'consulta', label: 'Consulta', kind: 'textarea', required: true, help_text: null, auto_filled: false }],
 }
 
 const documentTypes = [declaracao, parecer]

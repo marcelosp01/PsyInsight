@@ -6,6 +6,7 @@ export interface DocumentField {
   kind: FieldKind
   required: boolean
   help_text: string | null
+  auto_filled: boolean
 }
 
 export interface DocumentType {
@@ -21,6 +22,7 @@ export interface User {
   name: string
   email: string
   crp: string
+  local_atendimento: string
   created_at: string
 }
 

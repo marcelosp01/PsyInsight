@@ -11,7 +11,7 @@ from app.auth import (
 from app.config import settings
 from app.database import get_db
 from app.models import User
-from app.schemas import UserCreate, UserLogin, UserOut
+from app.schemas import UserCreate, UserLogin, UserOut, UserUpdate
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -70,4 +70,21 @@ def logout(response: Response):
 
 @router.get("/me", response_model=UserOut)
 def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.put("/me", response_model=UserOut)
+def update_me(
+    payload: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if payload.name is not None:
+        current_user.name = payload.name
+    if payload.crp is not None:
+        current_user.crp = payload.crp
+    if payload.local_atendimento is not None:
+        current_user.local_atendimento = payload.local_atendimento
+    db.commit()
+    db.refresh(current_user)
     return current_user

@@ -13,6 +13,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(255))
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     crp: Mapped[str] = mapped_column(String(50))
+    local_atendimento: Mapped[str] = mapped_column(String(255), default="")
     hashed_password: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)

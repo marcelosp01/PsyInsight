@@ -42,6 +42,7 @@ describe('LoginPage', () => {
       name: 'Ana Souza',
       email: 'ana@example.com',
       crp: '06/12345',
+      local_atendimento: '',
       created_at: new Date().toISOString(),
     })
     const user = userEvent.setup()

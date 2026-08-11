@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { api, type LoginPayload, type SignupPayload } from '../api/client'
+import { api, type LoginPayload, type SignupPayload, type UpdateProfilePayload } from '../api/client'
 import type { User } from '../types/document'
 
 interface AuthContextValue {
@@ -8,6 +8,7 @@ interface AuthContextValue {
   login: (payload: LoginPayload) => Promise<void>
   signup: (payload: SignupPayload) => Promise<void>
   logout: () => Promise<void>
+  updateProfile: (payload: UpdateProfilePayload) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -39,8 +40,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }
 
+  const updateProfile = async (payload: UpdateProfilePayload) => {
+    const updatedUser = await api.updateProfile(payload)
+    setUser(updatedUser)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   )

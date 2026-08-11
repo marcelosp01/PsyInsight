@@ -6,10 +6,12 @@ from pydantic import BaseModel, Field, create_model
 
 from app.schemas import DocumentField, DocumentTypeOut
 
-_COMMON_HEADER_FIELDS = [
-    DocumentField(key="profissional_nome", label="Nome do(a) psicólogo(a)", kind="text"),
-    DocumentField(key="profissional_crp", label="CRP", kind="text"),
-    DocumentField(key="cidade_data", label="Cidade e data", kind="text"),
+_ASSINATURA_FIELDS = [
+    DocumentField(
+        key="profissional_nome", label="Nome do(a) psicólogo(a)", kind="text", auto_filled=True
+    ),
+    DocumentField(key="profissional_crp", label="CRP", kind="text", auto_filled=True),
+    DocumentField(key="cidade_data", label="Local e data", kind="text", auto_filled=True),
 ]
 
 _REFERENCIAS = DocumentField(
@@ -29,7 +31,6 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
             article="Art. 9º",
             description="Confirma a ocorrência de um atendimento psicológico, sem detalhar procedimentos, análises ou conclusões.",
             fields=[
-                *_COMMON_HEADER_FIELDS,
                 DocumentField(
                     key="texto_declaracao",
                     label="Texto da declaração",
@@ -42,6 +43,7 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
                         "procedimentos, análises ou conclusões."
                     ),
                 ),
+                *_ASSINATURA_FIELDS,
             ],
         ),
         DocumentTypeOut(
@@ -50,7 +52,6 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
             article="Art. 10",
             description="Atesta, a partir da avaliação psicológica, a existência ou não de transtorno ou impedimento.",
             fields=[
-                *_COMMON_HEADER_FIELDS,
                 DocumentField(
                     key="texto_atestado",
                     label="Texto do atestado",
@@ -64,6 +65,7 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
                         "avaliada, o CID correspondente e eventual afastamento sugerido."
                     ),
                 ),
+                *_ASSINATURA_FIELDS,
             ],
         ),
         DocumentTypeOut(
@@ -72,7 +74,6 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
             article="Art. 11",
             description="Descreve, de forma articulada, as informações resultantes de acompanhamento psicológico.",
             fields=[
-                *_COMMON_HEADER_FIELDS,
                 DocumentField(
                     key="texto_relatorio",
                     label="Texto do relatório",
@@ -86,6 +87,7 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
                     ),
                 ),
                 _REFERENCIAS,
+                *_ASSINATURA_FIELDS,
             ],
         ),
         DocumentTypeOut(
@@ -94,7 +96,6 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
             article="Art. 12",
             description="Relatório psicológico elaborado em conjunto com outros profissionais.",
             fields=[
-                *_COMMON_HEADER_FIELDS,
                 DocumentField(
                     key="texto_relatorio",
                     label="Texto do relatório",
@@ -108,6 +109,7 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
                     ),
                 ),
                 _REFERENCIAS,
+                *_ASSINATURA_FIELDS,
             ],
         ),
         DocumentTypeOut(
@@ -116,7 +118,6 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
             article="Art. 13",
             description="Documento mais completo, com exposição minuciosa de exames, técnicas, análises e conclusões.",
             fields=[
-                *_COMMON_HEADER_FIELDS,
                 DocumentField(
                     key="texto_laudo",
                     label="Texto do laudo",
@@ -131,6 +132,7 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
                     ),
                 ),
                 _REFERENCIAS,
+                *_ASSINATURA_FIELDS,
             ],
         ),
         DocumentTypeOut(
@@ -139,7 +141,6 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
             article="Art. 14",
             description="Resposta técnica a uma consulta específica, com base em revisão e análise de informações já existentes.",
             fields=[
-                *_COMMON_HEADER_FIELDS,
                 DocumentField(
                     key="texto_parecer",
                     label="Texto do parecer",
@@ -152,6 +153,7 @@ DOCUMENT_TYPES: dict[str, DocumentTypeOut] = {
                     ),
                 ),
                 _REFERENCIAS,
+                *_ASSINATURA_FIELDS,
             ],
         ),
     ]
@@ -172,7 +174,9 @@ def build_extraction_model(document_type: DocumentTypeOut) -> type[BaseModel]:
 
     Todos os campos são opcionais aqui de propósito: "obrigatório" no sentido
     da Resolução CFP é regra de negócio de _validate_values (aplicada só ao
-    salvar/gerar PDF), não do schema de extração incremental do chat.
+    salvar/gerar PDF), não do schema de extração incremental do chat. Campos
+    `auto_filled` (bloco de assinatura) ficam de fora: são preenchidos pelo
+    backend a partir do perfil do usuário, nunca pela IA.
     """
     field_definitions: dict[str, tuple[type, object]] = {
         field.key: (
@@ -183,6 +187,7 @@ def build_extraction_model(document_type: DocumentTypeOut) -> type[BaseModel]:
             ),
         )
         for field in document_type.fields
+        if not field.auto_filled
     }
     field_definitions["memory_note"] = (
         str | None,

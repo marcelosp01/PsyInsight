@@ -3,6 +3,7 @@ import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { MeusLaudosPage } from './pages/MeusLaudosPage'
+import { PerfilPage } from './pages/PerfilPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
 function App() {
@@ -23,6 +24,14 @@ function App() {
         element={
           <ProtectedRoute>
             <MeusLaudosPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/perfil"
+        element={
+          <ProtectedRoute>
+            <PerfilPage />
           </ProtectedRoute>
         }
       />

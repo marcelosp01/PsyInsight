@@ -177,6 +177,12 @@ export function DashboardPage() {
             >
               Meus Laudos
             </Link>
+            <Link
+              to="/perfil"
+              className="rounded-lg border border-nude-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-nude-100"
+            >
+              Meu Perfil
+            </Link>
             <button
               onClick={() => logout()}
               className="rounded-lg border border-nude-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-nude-100"
