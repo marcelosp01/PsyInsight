@@ -243,6 +243,77 @@ def test_send_message_streams_error_event_when_chat_reply_fails(signed_up_client
     ]
 
 
+def test_send_message_system_instruction_includes_test_suggestions_for_laudo(
+    signed_up_client, monkeypatch
+):
+    captured = {}
+
+    async def _capturing_stream_chat_reply(*, system_instruction, history, user_message):
+        captured["system_instruction"] = system_instruction
+        async for chunk in _fake_stream_chat_reply(
+            system_instruction=system_instruction, history=history, user_message=user_message
+        ):
+            yield chunk
+
+    monkeypatch.setattr(gemini_client, "stream_chat_reply", _capturing_stream_chat_reply)
+    monkeypatch.setattr(gemini_client, "extract_structured_values", _make_fake_extraction({}))
+    session = signed_up_client.post("/api/chat/sessions", json={"document_type": "laudo"}).json()
+
+    with signed_up_client.stream(
+        "POST", f"/api/chat/sessions/{session['id']}/messages", json={"content": "oi"}
+    ) as response:
+        list(_iter_events(response))
+
+    assert "SATEPSI" in captured["system_instruction"]
+
+
+def test_send_message_system_instruction_omits_test_suggestions_for_declaracao(
+    signed_up_client, monkeypatch
+):
+    captured = {}
+
+    async def _capturing_stream_chat_reply(*, system_instruction, history, user_message):
+        captured["system_instruction"] = system_instruction
+        async for chunk in _fake_stream_chat_reply(
+            system_instruction=system_instruction, history=history, user_message=user_message
+        ):
+            yield chunk
+
+    monkeypatch.setattr(gemini_client, "stream_chat_reply", _capturing_stream_chat_reply)
+    monkeypatch.setattr(gemini_client, "extract_structured_values", _make_fake_extraction({}))
+    session = signed_up_client.post(
+        "/api/chat/sessions", json={"document_type": "declaracao"}
+    ).json()
+
+    with signed_up_client.stream(
+        "POST", f"/api/chat/sessions/{session['id']}/messages", json={"content": "oi"}
+    ) as response:
+        list(_iter_events(response))
+
+    assert "SATEPSI" not in captured["system_instruction"]
+
+
+def test_send_message_extraction_instruction_warns_against_treating_suggestions_as_applied(
+    signed_up_client, monkeypatch
+):
+    captured = {}
+
+    async def _capturing_extract(*, system_instruction, history, schema):
+        captured["system_instruction"] = system_instruction
+        return schema(memory_note=None)
+
+    monkeypatch.setattr(gemini_client, "stream_chat_reply", _fake_stream_chat_reply)
+    monkeypatch.setattr(gemini_client, "extract_structured_values", _capturing_extract)
+    session = signed_up_client.post("/api/chat/sessions", json={"document_type": "laudo"}).json()
+
+    with signed_up_client.stream(
+        "POST", f"/api/chat/sessions/{session['id']}/messages", json={"content": "oi"}
+    ) as response:
+        list(_iter_events(response))
+
+    assert "NÃO significam que o instrumento foi aplicado" in captured["system_instruction"]
+
+
 def test_send_message_streams_error_event_when_extraction_fails(signed_up_client, monkeypatch):
     async def _failing_extract(*, system_instruction, history, schema):
         raise RuntimeError("boom")
