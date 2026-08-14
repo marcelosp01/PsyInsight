@@ -9,6 +9,7 @@ dependencies = [
     "fastapi>=0.141.1",
     "fpdf2>=2.8.7",
     "google-genai>=2.16.0",
+    "pillow>=11.0.0",
     "pydantic-settings>=2.14.2",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.32",

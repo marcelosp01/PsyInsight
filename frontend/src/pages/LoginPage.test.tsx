@@ -45,6 +45,7 @@ describe('LoginPage', () => {
       local_atendimento: '',
       chat_input_size: 'medio',
       chat_font_size: 'medio',
+      logo_url: null,
       created_at: new Date().toISOString(),
     })
     const user = userEvent.setup()

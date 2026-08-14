@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
+from app import logo_service
 from app.auth import get_current_user
 from app.document_types import get_document_type, list_document_types
 from app.models import User
@@ -36,7 +37,8 @@ def generate_pdf(
             detail=f"Campos obrigatórios não preenchidos: {', '.join(missing)}",
         )
 
-    pdf_bytes = render_document_pdf(document_type, payload.values)
+    logo_path = logo_service.logo_path_for(current_user.id) if current_user.has_logo else None
+    pdf_bytes = render_document_pdf(document_type, payload.values, logo_path)
     filename = f"{document_type.slug}.pdf"
     return Response(
         content=pdf_bytes,

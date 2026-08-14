@@ -9,6 +9,8 @@ interface AuthContextValue {
   signup: (payload: SignupPayload) => Promise<void>
   logout: () => Promise<void>
   updateProfile: (payload: UpdateProfilePayload) => Promise<void>
+  uploadLogo: (file: File) => Promise<void>
+  removeLogo: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -45,8 +47,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(updatedUser)
   }
 
+  const uploadLogo = async (file: File) => {
+    const updatedUser = await api.uploadLogo(file)
+    setUser(updatedUser)
+  }
+
+  const removeLogo = async () => {
+    const updatedUser = await api.removeLogo()
+    setUser(updatedUser)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, updateProfile }}>
+    <AuthContext.Provider
+      value={{ user, isLoading, login, signup, logout, updateProfile, uploadLogo, removeLogo }}
+    >
       {children}
     </AuthContext.Provider>
   )

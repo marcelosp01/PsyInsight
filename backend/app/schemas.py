@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field
 
 # Níveis de preferência de layout do chat (PSYIN-6): tamanho da área de texto
 # de entrada e tamanho de fonte das mensagens.
@@ -30,7 +30,18 @@ class UserOut(BaseModel):
     local_atendimento: str
     chat_input_size: ChatLayoutSize
     chat_font_size: ChatLayoutSize
+    # Não expostos diretamente: `logo_url` (abaixo) é a única forma pública de
+    # saber se/onde a logo do usuário está (ver app/logo_service.py).
+    has_logo: bool = Field(exclude=True)
+    logo_version: int = Field(exclude=True)
     created_at: datetime
+
+    @computed_field
+    @property
+    def logo_url(self) -> str | None:
+        if not self.has_logo:
+            return None
+        return f"/api/auth/me/logo?v={self.logo_version}"
 
 
 class UserUpdate(BaseModel):

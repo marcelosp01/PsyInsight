@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, JSON, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -16,6 +16,11 @@ class User(Base):
     local_atendimento: Mapped[str] = mapped_column(String(255), default="")
     chat_input_size: Mapped[str] = mapped_column(String(20), default="medio")
     chat_font_size: Mapped[str] = mapped_column(String(20), default="medio")
+    # Logomarca (PSYIN-7): a imagem em si fica em disco (settings.logos_dir /
+    # f"{user_id}.png", sempre normalizada para PNG — ver app/logo_service.py),
+    # não no banco. logo_version só existe para cache-busting da URL servida.
+    has_logo: Mapped[bool] = mapped_column(Boolean, default=False)
+    logo_version: Mapped[int] = mapped_column(Integer, default=0)
     hashed_password: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)

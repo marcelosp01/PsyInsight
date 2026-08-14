@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     database_path: Path = REPO_ROOT / "backend" / "data" / "psyinsight.db"
     cors_origins: list[str] = ["http://localhost:5173"]
 
+    @property
+    def logos_dir(self) -> Path:
+        # Deriva de database_path para herdar automaticamente o isolamento de
+        # testes já existente (conftest.py sobrescreve DATABASE_PATH).
+        return self.database_path.parent / "logos"
+
     gemini_api_key: str = Field(
         default="", validation_alias=AliasChoices("GEMINI_API_KEY", "GOOGLE_API_KEY")
     )

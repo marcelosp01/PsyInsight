@@ -1,11 +1,14 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { ApiError } from '../api/client'
 import { LAYOUT_SIZES, LAYOUT_SIZE_LABELS, normalizeLayoutSize, type LayoutSize } from '../lib/layoutPreferences'
 
+const MAX_LOGO_BYTES = 2 * 1024 * 1024
+const ACCEPTED_LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+
 export function PerfilPage() {
-  const { user, updateProfile } = useAuth()
+  const { user, updateProfile, uploadLogo, removeLogo } = useAuth()
   const [name, setName] = useState(user?.name ?? '')
   const [crp, setCrp] = useState(user?.crp ?? '')
   const [localAtendimento, setLocalAtendimento] = useState(user?.local_atendimento ?? '')
@@ -14,6 +17,8 @@ export function PerfilPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmation, setConfirmation] = useState<string | null>(null)
+  const [isLogoSaving, setIsLogoSaving] = useState(false)
+  const [logoError, setLogoError] = useState<string | null>(null)
 
   // `user` chega de forma assíncrona (carregado pelo AuthContext após o
   // primeiro render); sincroniza os campos assim que os dados reais chegam.
@@ -44,6 +49,43 @@ export function PerfilPage() {
       setError(err instanceof ApiError ? err.message : 'Não foi possível atualizar o perfil.')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleLogoChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    if (!ACCEPTED_LOGO_TYPES.includes(file.type)) {
+      setLogoError('Formato de imagem não suportado. Use PNG, JPG ou WEBP.')
+      return
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      setLogoError('A imagem excede o tamanho máximo de 2MB.')
+      return
+    }
+
+    setLogoError(null)
+    setIsLogoSaving(true)
+    try {
+      await uploadLogo(file)
+    } catch (err) {
+      setLogoError(err instanceof ApiError ? err.message : 'Não foi possível enviar a logomarca.')
+    } finally {
+      setIsLogoSaving(false)
+    }
+  }
+
+  const handleRemoveLogo = async () => {
+    setLogoError(null)
+    setIsLogoSaving(true)
+    try {
+      await removeLogo()
+    } catch (err) {
+      setLogoError(err instanceof ApiError ? err.message : 'Não foi possível remover a logomarca.')
+    } finally {
+      setIsLogoSaving(false)
     }
   }
 
@@ -156,6 +198,56 @@ export function PerfilPage() {
                   </select>
                 </div>
               </div>
+            </div>
+
+            <div className="border-t border-nude-200 pt-4">
+              <h2 className="text-sm font-semibold text-slate-700">Logomarca</h2>
+              <p className="mt-1 text-xs text-slate-400">
+                Aparece automaticamente no topo da pré-visualização e do PDF dos seus documentos.
+              </p>
+
+              <div className="mt-3 flex items-center gap-4">
+                {user?.logo_url ? (
+                  <img
+                    src={user.logo_url}
+                    alt="Logomarca atual"
+                    className="h-16 w-auto max-w-[160px] rounded border border-nude-200 object-contain p-1"
+                  />
+                ) : (
+                  <div className="flex h-16 w-32 items-center justify-center rounded border border-dashed border-nude-300 text-xs text-slate-400">
+                    Sem logomarca
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  <label
+                    htmlFor="logo"
+                    className="cursor-pointer rounded-lg border border-nude-200 px-4 py-2 text-center text-sm font-medium text-slate-600 hover:bg-nude-100 aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
+                    aria-disabled={isLogoSaving}
+                  >
+                    {user?.logo_url ? 'Trocar logomarca' : 'Enviar logomarca'}
+                  </label>
+                  <input
+                    id="logo"
+                    type="file"
+                    accept={ACCEPTED_LOGO_TYPES.join(',')}
+                    disabled={isLogoSaving}
+                    onChange={handleLogoChange}
+                    className="sr-only"
+                  />
+                  {user?.logo_url && (
+                    <button
+                      type="button"
+                      disabled={isLogoSaving}
+                      onClick={handleRemoveLogo}
+                      className="rounded-lg border border-nude-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-nude-100 disabled:opacity-60"
+                    >
+                      Remover logomarca
+                    </button>
+                  )}
+                </div>
+              </div>
+              {logoError && <p className="mt-2 text-sm text-red-700">{logoError}</p>}
             </div>
 
             <div>
