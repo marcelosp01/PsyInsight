@@ -23,6 +23,8 @@ const loggedInUser = {
   email: 'ana@example.com',
   crp: '06/12345',
   local_atendimento: 'São Paulo - SP',
+  chat_input_size: 'medio',
+  chat_font_size: 'medio',
   created_at: new Date().toISOString(),
 }
 
@@ -69,8 +71,33 @@ describe('PerfilPage', () => {
       name: 'Ana Souza',
       crp: '06/12345',
       local_atendimento: 'Recife - PE',
+      chat_input_size: 'medio',
+      chat_font_size: 'medio',
     })
     expect(await screen.findByText('Perfil atualizado.')).toBeInTheDocument()
+  })
+
+  it('submits the chosen chat layout preferences', async () => {
+    vi.mocked(api.updateProfile).mockResolvedValue({
+      ...loggedInUser,
+      chat_input_size: 'grande',
+      chat_font_size: 'pequeno',
+    })
+    const user = userEvent.setup()
+    renderPerfilPage()
+
+    await screen.findByDisplayValue('Ana Souza')
+    await user.selectOptions(screen.getByLabelText('Tamanho da caixa de mensagem'), 'grande')
+    await user.selectOptions(screen.getByLabelText('Tamanho da fonte do chat'), 'pequeno')
+    await user.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+
+    expect(api.updateProfile).toHaveBeenCalledWith({
+      name: 'Ana Souza',
+      crp: '06/12345',
+      local_atendimento: 'São Paulo - SP',
+      chat_input_size: 'grande',
+      chat_font_size: 'pequeno',
+    })
   })
 
   it('shows an error message when updating the profile fails', async () => {

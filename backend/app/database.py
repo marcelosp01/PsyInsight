@@ -31,6 +31,7 @@ def init_database() -> None:
 
     Base.metadata.create_all(bind=engine)
     _ensure_user_local_atendimento_column()
+    _ensure_user_chat_preferences_columns()
 
 
 def _ensure_user_local_atendimento_column() -> None:
@@ -44,6 +45,22 @@ def _ensure_user_local_atendimento_column() -> None:
                 "ALTER TABLE users ADD COLUMN local_atendimento VARCHAR(255) NOT NULL DEFAULT ''"
             )
             connection.commit()
+
+
+def _ensure_user_chat_preferences_columns() -> None:
+    """Mesmo motivo de `_ensure_user_local_atendimento_column`, para as colunas
+    de preferência de layout do chat adicionadas no PSYIN-6."""
+    with engine.connect() as connection:
+        columns = {row[1] for row in connection.exec_driver_sql("PRAGMA table_info(users)")}
+        if "chat_input_size" not in columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN chat_input_size VARCHAR(20) NOT NULL DEFAULT 'medio'"
+            )
+        if "chat_font_size" not in columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN chat_font_size VARCHAR(20) NOT NULL DEFAULT 'medio'"
+            )
+        connection.commit()
 
 
 def reset_database() -> None:

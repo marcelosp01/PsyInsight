@@ -23,6 +23,8 @@ export interface User {
   email: string
   crp: string
   local_atendimento: string
+  chat_input_size: string
+  chat_font_size: string
   created_at: string
 }
 

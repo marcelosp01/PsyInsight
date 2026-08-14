@@ -2,12 +2,15 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { ApiError } from '../api/client'
+import { LAYOUT_SIZES, LAYOUT_SIZE_LABELS, normalizeLayoutSize, type LayoutSize } from '../lib/layoutPreferences'
 
 export function PerfilPage() {
   const { user, updateProfile } = useAuth()
   const [name, setName] = useState(user?.name ?? '')
   const [crp, setCrp] = useState(user?.crp ?? '')
   const [localAtendimento, setLocalAtendimento] = useState(user?.local_atendimento ?? '')
+  const [chatInputSize, setChatInputSize] = useState<LayoutSize>(normalizeLayoutSize(user?.chat_input_size))
+  const [chatFontSize, setChatFontSize] = useState<LayoutSize>(normalizeLayoutSize(user?.chat_font_size))
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmation, setConfirmation] = useState<string | null>(null)
@@ -19,6 +22,8 @@ export function PerfilPage() {
     setName(user.name)
     setCrp(user.crp)
     setLocalAtendimento(user.local_atendimento)
+    setChatInputSize(normalizeLayoutSize(user.chat_input_size))
+    setChatFontSize(normalizeLayoutSize(user.chat_font_size))
   }, [user])
 
   const handleSubmit = async (event: FormEvent) => {
@@ -26,7 +31,13 @@ export function PerfilPage() {
     setError(null)
     setIsSaving(true)
     try {
-      await updateProfile({ name, crp, local_atendimento: localAtendimento })
+      await updateProfile({
+        name,
+        crp,
+        local_atendimento: localAtendimento,
+        chat_input_size: chatInputSize,
+        chat_font_size: chatFontSize,
+      })
       setConfirmation('Perfil atualizado.')
       setTimeout(() => setConfirmation(null), 4000)
     } catch (err) {
@@ -98,6 +109,53 @@ export function PerfilPage() {
               <p className="mt-1 text-xs text-slate-400">
                 Usado para preencher automaticamente o local e a data ao final dos seus documentos.
               </p>
+            </div>
+
+            <div className="border-t border-nude-200 pt-4">
+              <h2 className="text-sm font-semibold text-slate-700">Preferências do chat</h2>
+              <p className="mt-1 text-xs text-slate-400">
+                Ajustam o tamanho da caixa de mensagem e da fonte na conversa com a IA.
+              </p>
+
+              <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="chat_input_size" className="block text-sm font-medium text-slate-700">
+                    Tamanho da caixa de mensagem
+                  </label>
+                  <select
+                    id="chat_input_size"
+                    disabled={isSaving}
+                    value={chatInputSize}
+                    onChange={(e) => setChatInputSize(e.target.value as LayoutSize)}
+                    className="mt-1 w-full rounded-lg border border-nude-200 px-3 py-2 text-slate-800 focus:border-nude-500 focus:outline-none focus:ring-1 focus:ring-nude-500 disabled:opacity-60"
+                  >
+                    {LAYOUT_SIZES.map((size) => (
+                      <option key={size} value={size}>
+                        {LAYOUT_SIZE_LABELS[size]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="chat_font_size" className="block text-sm font-medium text-slate-700">
+                    Tamanho da fonte do chat
+                  </label>
+                  <select
+                    id="chat_font_size"
+                    disabled={isSaving}
+                    value={chatFontSize}
+                    onChange={(e) => setChatFontSize(e.target.value as LayoutSize)}
+                    className="mt-1 w-full rounded-lg border border-nude-200 px-3 py-2 text-slate-800 focus:border-nude-500 focus:outline-none focus:ring-1 focus:ring-nude-500 disabled:opacity-60"
+                  >
+                    {LAYOUT_SIZES.map((size) => (
+                      <option key={size} value={size}>
+                        {LAYOUT_SIZE_LABELS[size]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
 
             <div>

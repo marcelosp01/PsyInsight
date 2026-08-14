@@ -43,6 +43,8 @@ describe('LoginPage', () => {
       email: 'ana@example.com',
       crp: '06/12345',
       local_atendimento: '',
+      chat_input_size: 'medio',
+      chat_font_size: 'medio',
       created_at: new Date().toISOString(),
     })
     const user = userEvent.setup()
