@@ -53,6 +53,8 @@ export interface UpdateProfilePayload {
   name?: string
   crp?: string
   local_atendimento?: string
+  chat_input_size?: string
+  chat_font_size?: string
 }
 
 export const api = {

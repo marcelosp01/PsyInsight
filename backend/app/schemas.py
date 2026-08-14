@@ -1,6 +1,11 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+# Níveis de preferência de layout do chat (PSYIN-6): tamanho da área de texto
+# de entrada e tamanho de fonte das mensagens.
+ChatLayoutSize = Literal["pequeno", "medio", "grande"]
 
 
 class UserCreate(BaseModel):
@@ -23,6 +28,8 @@ class UserOut(BaseModel):
     email: EmailStr
     crp: str
     local_atendimento: str
+    chat_input_size: ChatLayoutSize
+    chat_font_size: ChatLayoutSize
     created_at: datetime
 
 
@@ -30,6 +37,8 @@ class UserUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=255)
     crp: str | None = Field(default=None, min_length=2, max_length=50)
     local_atendimento: str | None = Field(default=None, max_length=255)
+    chat_input_size: ChatLayoutSize | None = Field(default=None)
+    chat_font_size: ChatLayoutSize | None = Field(default=None)
 
 
 class DocumentField(BaseModel):

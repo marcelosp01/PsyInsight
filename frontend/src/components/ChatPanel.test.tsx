@@ -189,6 +189,56 @@ describe('ChatPanel', () => {
     })
   })
 
+  describe('layout preferences', () => {
+    it('applies the configured textarea height and font size classes', async () => {
+      vi.mocked(api.chat.createOrResumeSession).mockResolvedValue(
+        chatSession({
+          messages: [{ id: 1, role: 'assistant', content: 'Oi', created_at: '2026-01-01' }],
+        }),
+      )
+
+      renderPanel({ chatInputSize: 'grande', chatFontSize: 'grande' })
+
+      await screen.findByText('Oi')
+      expect(screen.getByLabelText('Mensagem').className).toContain('h-36')
+      expect(screen.getByLabelText('Mensagem').className).toContain('text-base')
+      expect(screen.getByText('Oi').className).toContain('text-base')
+    })
+
+    it('sends the message when Enter is pressed without Shift', async () => {
+      vi.mocked(api.chat.createOrResumeSession).mockResolvedValue(
+        chatSession({
+          messages: [{ id: 1, role: 'assistant', content: 'Qual o nome do paciente?', created_at: '2026-01-01' }],
+        }),
+      )
+      vi.mocked(api.chat.sendMessage).mockResolvedValue(makeSSEResponse([{ type: 'done' }]))
+      const user = userEvent.setup()
+      renderPanel()
+
+      await screen.findByText('Qual o nome do paciente?')
+      await user.type(screen.getByLabelText('Mensagem'), 'João da Silva{Enter}')
+
+      expect(api.chat.sendMessage).toHaveBeenCalledWith(1, 'João da Silva')
+    })
+
+    it('inserts a newline instead of sending when Shift+Enter is pressed', async () => {
+      vi.mocked(api.chat.createOrResumeSession).mockResolvedValue(
+        chatSession({
+          messages: [{ id: 1, role: 'assistant', content: 'Qual o nome do paciente?', created_at: '2026-01-01' }],
+        }),
+      )
+      vi.mocked(api.chat.sendMessage).mockResolvedValue(makeSSEResponse([{ type: 'done' }]))
+      const user = userEvent.setup()
+      renderPanel()
+
+      await screen.findByText('Qual o nome do paciente?')
+      await user.type(screen.getByLabelText('Mensagem'), 'Linha 1{Shift>}{Enter}{/Shift}Linha 2')
+
+      expect(api.chat.sendMessage).not.toHaveBeenCalled()
+      expect(screen.getByLabelText('Mensagem')).toHaveValue('Linha 1\nLinha 2')
+    })
+  })
+
   describe('without a known modality (initialDocumentType null)', () => {
     it('opens with a modality-selection turn instead of creating a session', async () => {
       vi.mocked(api.chat.selectModality).mockResolvedValue(

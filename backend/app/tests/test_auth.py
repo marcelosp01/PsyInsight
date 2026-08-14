@@ -84,6 +84,39 @@ def test_signup_defaults_local_atendimento_to_empty_string(client):
     assert response.json()["local_atendimento"] == ""
 
 
+def test_signup_defaults_chat_layout_preferences_to_medio(client):
+    response = client.post(
+        "/api/auth/signup",
+        json={
+            "name": "Ana Souza",
+            "email": "ana@example.com",
+            "crp": "06/12345",
+            "password": "senha-forte-123",
+        },
+    )
+
+    body = response.json()
+    assert body["chat_input_size"] == "medio"
+    assert body["chat_font_size"] == "medio"
+
+
+def test_update_me_updates_chat_layout_preferences(signed_up_client):
+    response = signed_up_client.put(
+        "/api/auth/me", json={"chat_input_size": "grande", "chat_font_size": "pequeno"}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["chat_input_size"] == "grande"
+    assert body["chat_font_size"] == "pequeno"
+
+
+def test_update_me_rejects_invalid_chat_layout_preference(signed_up_client):
+    response = signed_up_client.put("/api/auth/me", json={"chat_input_size": "enorme"})
+
+    assert response.status_code == 422
+
+
 def test_update_me_requires_authentication(client):
     response = client.put("/api/auth/me", json={"local_atendimento": "São Paulo - SP"})
     assert response.status_code == 401

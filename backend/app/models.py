@@ -14,6 +14,8 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     crp: Mapped[str] = mapped_column(String(50))
     local_atendimento: Mapped[str] = mapped_column(String(255), default="")
+    chat_input_size: Mapped[str] = mapped_column(String(20), default="medio")
+    chat_font_size: Mapped[str] = mapped_column(String(20), default="medio")
     hashed_password: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)

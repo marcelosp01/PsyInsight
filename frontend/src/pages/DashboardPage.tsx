@@ -214,6 +214,8 @@ export function DashboardPage() {
               documentTypes={documentTypes}
               initialDocumentType={selectedType}
               savedDocumentId={savedDocumentId}
+              chatInputSize={user?.chat_input_size}
+              chatFontSize={user?.chat_font_size}
               onDocumentTypeChange={handleDocumentTypeResolved}
               onValuesUpdate={setValues}
             />

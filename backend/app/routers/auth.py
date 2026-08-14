@@ -85,6 +85,10 @@ def update_me(
         current_user.crp = payload.crp
     if payload.local_atendimento is not None:
         current_user.local_atendimento = payload.local_atendimento
+    if payload.chat_input_size is not None:
+        current_user.chat_input_size = payload.chat_input_size
+    if payload.chat_font_size is not None:
+        current_user.chat_font_size = payload.chat_font_size
     db.commit()
     db.refresh(current_user)
     return current_user
