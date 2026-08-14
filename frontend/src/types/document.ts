@@ -25,6 +25,7 @@ export interface User {
   local_atendimento: string
   chat_input_size: string
   chat_font_size: string
+  logo_url: string | null
   created_at: string
 }
 

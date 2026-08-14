@@ -32,6 +32,7 @@ def init_database() -> None:
     Base.metadata.create_all(bind=engine)
     _ensure_user_local_atendimento_column()
     _ensure_user_chat_preferences_columns()
+    _ensure_user_logo_columns()
 
 
 def _ensure_user_local_atendimento_column() -> None:
@@ -59,6 +60,22 @@ def _ensure_user_chat_preferences_columns() -> None:
         if "chat_font_size" not in columns:
             connection.exec_driver_sql(
                 "ALTER TABLE users ADD COLUMN chat_font_size VARCHAR(20) NOT NULL DEFAULT 'medio'"
+            )
+        connection.commit()
+
+
+def _ensure_user_logo_columns() -> None:
+    """Mesmo motivo de `_ensure_user_local_atendimento_column`, para os metadados
+    da logomarca (PSYIN-7). A imagem em si não fica no banco (ver settings.logos_dir)."""
+    with engine.connect() as connection:
+        columns = {row[1] for row in connection.exec_driver_sql("PRAGMA table_info(users)")}
+        if "has_logo" not in columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN has_logo BOOLEAN NOT NULL DEFAULT 0"
+            )
+        if "logo_version" not in columns:
+            connection.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN logo_version INTEGER NOT NULL DEFAULT 0"
             )
         connection.commit()
 

@@ -1,6 +1,13 @@
+from pathlib import Path
+
 from fpdf import FPDF
+from fpdf.enums import Align
 
 from app.schemas import DocumentTypeOut
+
+# Mantido em sincronia com a altura máxima aplicada no preview
+# (DocumentPreview.tsx, `max-h-[22mm]`).
+_LOGO_MAX_HEIGHT_MM = 22
 
 
 def _write_line(pdf: FPDF, height: float, text: str, align: str = "L") -> None:
@@ -11,10 +18,16 @@ def _write_line(pdf: FPDF, height: float, text: str, align: str = "L") -> None:
     pdf.multi_cell(pdf.epw, height, text, align=align)
 
 
-def render_document_pdf(document_type: DocumentTypeOut, values: dict[str, str]) -> bytes:
+def render_document_pdf(
+    document_type: DocumentTypeOut, values: dict[str, str], logo_path: Path | None = None
+) -> bytes:
     pdf = FPDF(format="A4")
     pdf.set_auto_page_break(auto=True, margin=20)
     pdf.add_page()
+
+    if logo_path is not None and logo_path.is_file():
+        pdf.image(str(logo_path), x=Align.C, h=_LOGO_MAX_HEIGHT_MM)
+        pdf.ln(4)
 
     pdf.set_font("Helvetica", "B", 16)
     _write_line(pdf, 10, document_type.name, align="C")

@@ -71,6 +71,21 @@ export const api = {
   updateProfile: (payload: UpdateProfilePayload) =>
     request<User>('/api/auth/me', { method: 'PUT', body: JSON.stringify(payload) }),
 
+  async uploadLogo(file: File): Promise<User> {
+    const formData = new FormData()
+    formData.append('file', file)
+    // Sem Content-Type manual: o browser define o boundary do multipart sozinho.
+    const response = await fetch('/api/auth/me/logo', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    })
+    await throwIfNotOk(response)
+    return (await response.json()) as User
+  },
+
+  removeLogo: () => request<User>('/api/auth/me/logo', { method: 'DELETE' }),
+
   documentTypes: () => request<DocumentType[]>('/api/documents/types'),
 
   savedDocuments: {

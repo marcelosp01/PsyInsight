@@ -117,6 +117,23 @@ def test_update_me_rejects_invalid_chat_layout_preference(signed_up_client):
     assert response.status_code == 422
 
 
+def test_signup_defaults_logo_url_to_none(client):
+    response = client.post(
+        "/api/auth/signup",
+        json={
+            "name": "Ana Souza",
+            "email": "ana@example.com",
+            "crp": "06/12345",
+            "password": "senha-forte-123",
+        },
+    )
+
+    body = response.json()
+    assert body["logo_url"] is None
+    assert "has_logo" not in body
+    assert "logo_version" not in body
+
+
 def test_update_me_requires_authentication(client):
     response = client.put("/api/auth/me", json={"local_atendimento": "São Paulo - SP"})
     assert response.status_code == 401

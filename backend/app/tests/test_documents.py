@@ -1,3 +1,15 @@
+import io
+
+from PIL import Image
+
+
+def _png_bytes() -> bytes:
+    image = Image.new("RGB", (50, 30), (10, 20, 30))
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
 def test_document_types_requires_authentication(client):
     response = client.get("/api/documents/types")
     assert response.status_code == 401
@@ -60,3 +72,40 @@ def test_generate_pdf_returns_pdf_bytes_when_valid(signed_up_client):
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
     assert response.content.startswith(b"%PDF")
+
+
+def test_generate_pdf_includes_logo_when_user_has_one(signed_up_client):
+    signed_up_client.post("/api/auth/me/logo", files={"file": ("logo.png", _png_bytes(), "image/png")})
+
+    without_logo_response = signed_up_client.delete("/api/auth/me/logo")
+    assert without_logo_response.status_code == 200
+    without_logo = signed_up_client.post(
+        "/api/documents/pdf",
+        json={
+            "document_type": "declaracao",
+            "values": {
+                "profissional_nome": "Ana Souza",
+                "profissional_crp": "06/12345",
+                "cidade_data": "São Paulo, 31 de julho de 2026",
+                "texto_declaracao": "João da Silva, 30 anos, compareceu a 4 sessões de atendimento psicológico.",
+            },
+        },
+    )
+
+    signed_up_client.post("/api/auth/me/logo", files={"file": ("logo.png", _png_bytes(), "image/png")})
+    with_logo = signed_up_client.post(
+        "/api/documents/pdf",
+        json={
+            "document_type": "declaracao",
+            "values": {
+                "profissional_nome": "Ana Souza",
+                "profissional_crp": "06/12345",
+                "cidade_data": "São Paulo, 31 de julho de 2026",
+                "texto_declaracao": "João da Silva, 30 anos, compareceu a 4 sessões de atendimento psicológico.",
+            },
+        },
+    )
+
+    assert with_logo.status_code == 200
+    assert with_logo.content.startswith(b"%PDF")
+    assert len(with_logo.content) > len(without_logo.content)

@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from app import logo_service
 from app.auth import (
     COOKIE_NAME,
     create_access_token,
@@ -92,3 +94,47 @@ def update_me(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.post("/me/logo", response_model=UserOut)
+def upload_logo(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        logo_service.save_logo(current_user.id, file)
+    except logo_service.InvalidLogoError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+        ) from exc
+
+    current_user.has_logo = True
+    current_user.logo_version += 1
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.delete("/me/logo", response_model=UserOut)
+def remove_logo(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    logo_service.delete_logo(current_user.id)
+    current_user.has_logo = False
+    current_user.logo_version += 1
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.get("/me/logo")
+def get_logo(current_user: User = Depends(get_current_user)):
+    if not current_user.has_logo:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sem logomarca cadastrada.")
+    return FileResponse(
+        logo_service.logo_path_for(current_user.id),
+        media_type="image/png",
+        headers={"Cache-Control": "private, max-age=31536000, immutable"},
+    )

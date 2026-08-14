@@ -3,15 +3,19 @@ import type { DocumentType } from '../types/document'
 interface DocumentPreviewProps {
   documentType: DocumentType
   values: Record<string, string>
+  logoUrl?: string | null
 }
 
-export function DocumentPreview({ documentType, values }: DocumentPreviewProps) {
+export function DocumentPreview({ documentType, values, logoUrl }: DocumentPreviewProps) {
   return (
     <div
       id="document-preview"
       className="mx-auto min-h-[29.7cm] w-full max-w-[21cm] rounded-lg border border-nude-200 bg-white p-[2cm] font-preview text-slate-800 shadow-sm"
     >
       <header className="border-b border-nude-200 pb-4 text-center">
+        {logoUrl && (
+          <img src={logoUrl} alt="Logomarca" className="mx-auto mb-3 w-auto object-contain" style={{ maxHeight: '22mm' }} />
+        )}
         <h2 className="text-xl font-semibold">{documentType.name}</h2>
         <p className="mt-1 text-sm text-slate-500">
           {documentType.article} da Resolução CFP nº 06/2019

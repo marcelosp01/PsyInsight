@@ -60,4 +60,22 @@ describe('DocumentPreview', () => {
       screen.getByText('O texto do documento vai sendo construído aqui à medida que você responde no chat.'),
     ).toBeInTheDocument()
   })
+
+  it('renders the logo above the title when logoUrl is provided', () => {
+    render(
+      <DocumentPreview
+        documentType={documentType}
+        values={{}}
+        logoUrl="/api/auth/me/logo?v=1"
+      />,
+    )
+
+    expect(screen.getByAltText('Logomarca')).toHaveAttribute('src', '/api/auth/me/logo?v=1')
+  })
+
+  it('does not render a logo image when logoUrl is absent', () => {
+    render(<DocumentPreview documentType={documentType} values={{}} />)
+
+    expect(screen.queryByAltText('Logomarca')).not.toBeInTheDocument()
+  })
 })

@@ -252,7 +252,7 @@ export function DashboardPage() {
               <p className="print-hide mb-3 text-sm text-red-700">{downloadError}</p>
             )}
             {selectedType ? (
-              <DocumentPreview documentType={selectedType} values={values} />
+              <DocumentPreview documentType={selectedType} values={values} logoUrl={user?.logo_url} />
             ) : (
               <div className="flex h-[75vh] items-center justify-center rounded-lg border border-dashed border-nude-300 bg-white/60 p-10 text-center text-sm text-slate-500">
                 A pré-visualização aparece assim que a modalidade do documento for definida na
